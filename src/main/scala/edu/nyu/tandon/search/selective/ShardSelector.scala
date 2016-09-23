@@ -3,42 +3,32 @@ package edu.nyu.tandon.search.selective
 import java.io._
 
 import edu.nyu.tandon.search.selective.ShardSelector.binsWithinBudget
-import edu.nyu.tandon.search.selective.data.{Bin, QueryData, QueryExperiment, ShardQueue}
+import edu.nyu.tandon.search.selective.data.{Bin, QueryShardExperiment, ShardQueue}
 import scopt.OptionParser
 
 /**
-  *
-  * Files:
-  *   *.payoff
-  *   *.cost
-  *     - each line is a QUERY; each field is a BIN
-  *   *.division
-  *     - each field is a length (in terms of bins) of an i-th SHARD
-  *   *.selection
-  *     - each line is a QUERY; each field is the number of chosen bins in a SHARD
-  *
   * @author michal.siedlaczek@nyu.edu
   */
-class ShardSelector(val queryDataIterator: Iterator[QueryData],
-                    val shardIds: List[Int],
+class ShardSelector(val queryShardExperiment: QueryShardExperiment,
                     val budget: Double)
-  extends Iterable[List[Int]] {
+  extends Iterable[Seq[Int]] {
 
   /**
     * Get the number of bins to query for each shard.
     */
-  def selectedShards(queue: ShardQueue): List[Int] = {
+  def selectedShards(queue: ShardQueue): Seq[Int] = {
     val bins = queue.toList
     val m = binsWithinBudget(bins, budget)
       .groupBy(_.shardId)
       .mapValues(_.length)
       .withDefaultValue(0)
-    for (i <- shardIds.distinct) yield m(i)
+    for (i <- List.range(0, queryShardExperiment.numberOfShards)) yield m(i)
   }
 
-  override def iterator: Iterator[List[Int]] = new Iterator[List[Int]] {
+  override def iterator: Iterator[Seq[Int]] = new Iterator[Seq[Int]] {
+    val queryDataIterator = queryShardExperiment.iterator
     override def hasNext: Boolean = queryDataIterator.hasNext
-    override def next(): List[Int] = {
+    override def next(): Seq[Int] = {
       selectedShards(ShardQueue.maxPayoffQueue(queryDataIterator.next()))
     }
   }
@@ -49,7 +39,7 @@ class ShardSelector(val queryDataIterator: Iterator[QueryData],
   def write(outputStream: OutputStream): Unit = {
     val writer = new BufferedWriter(new OutputStreamWriter(outputStream))
     for (q <- this) {
-      writer.append(q.mkString(QueryExperiment.FieldSeparator))
+      writer.append(q.mkString(QueryShardExperiment.FieldSeparator))
       writer.newLine()
     }
     writer.close()
@@ -91,9 +81,9 @@ object ShardSelector {
     parser.parse(args, Config()) match {
       case Some(config) =>
 
-        val experiment = new QueryExperiment(config.basename)
-        val shardSelector = new ShardSelector(experiment.iterator, experiment.shardIds, config.budget)
-        shardSelector.write(config.basename + QueryExperiment.SelectionSuffix)
+        val experiment = QueryShardExperiment.fromBasename(config.basename)
+        val shardSelector = new ShardSelector(experiment, config.budget)
+        shardSelector.write(config.basename + QueryShardExperiment.SelectionSuffix)
 
       case None =>
     }
