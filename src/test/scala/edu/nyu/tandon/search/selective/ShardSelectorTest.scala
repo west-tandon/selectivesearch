@@ -2,7 +2,7 @@ package edu.nyu.tandon.search.selective
 
 import java.io.ByteArrayOutputStream
 
-import edu.nyu.tandon.search.selective.data.{Bin, QueryExperiment}
+import edu.nyu.tandon.search.selective.data.{Bin, QueryShardExperiment}
 import org.scalatest.FunSuite
 
 /**
@@ -11,8 +11,8 @@ import org.scalatest.FunSuite
 class ShardSelectorTest extends FunSuite {
 
   trait Selector {
-    val queryExperiment = new QueryExperiment(getClass.getResource("/").getPath + "test")
-    val selector = new ShardSelector(queryExperiment.iterator, queryExperiment.shardIds, 5)
+    val queryExperiment = QueryShardExperiment.fromBasename(getClass.getResource("/").getPath + "test")
+    val selector = new ShardSelector(queryExperiment, 5)
   }
 
   trait Bins {
@@ -76,7 +76,7 @@ class ShardSelectorTest extends FunSuite {
       assert(l === List(
         List(0, 3, 2),
         List(2, 0, 0),
-        List(2, 2, 1)
+        List(1, 2, 2)
       ))
     }
   }
@@ -93,7 +93,7 @@ class ShardSelectorTest extends FunSuite {
       assert(os.toString === new StringBuilder()
         .append("0 3 2\n")
         .append("2 0 0\n")
-        .append("2 2 1\n")
+        .append("1 2 2\n")
         .toString())
     }
   }

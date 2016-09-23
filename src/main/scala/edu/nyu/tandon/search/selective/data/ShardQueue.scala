@@ -31,10 +31,9 @@ object ShardQueue {
 
   def maxPayoffQueue(queryData: QueryData): ShardQueue = {
     val queue = new mutable.PriorityQueue[List[Bin]]()(Ordering.by(_.head.payoff))
-    queryData.bins
-      .groupBy(_.shardId)
-      .filter { case (id, bins) => bins.nonEmpty }
-      .values.foreach(queue.enqueue(_))
+    queryData.binsByShard
+      .filter(_.nonEmpty)
+      .foreach(queue.enqueue(_))
     new ShardQueue(queue)
   }
 
