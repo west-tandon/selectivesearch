@@ -2,8 +2,9 @@ package edu.nyu.tandon.search.selective.data
 
 import java.io.FileInputStream
 import java.util.Properties
+import edu.nyu.tandon._
+import edu.nyu.tandon.search.selective._
 
-import edu.nyu.tandon.search.selective.data.QueryShardExperiment.FieldSeparator
 
 import scala.io.{BufferedSource, Source}
 
@@ -60,15 +61,6 @@ class QueryShardExperiment(val querySource: BufferedSource,
 }
 
 object QueryShardExperiment {
-
-  val CostSuffix = ".cost"
-  val DivisionSuffix = ".division"
-  val PayoffSuffix = ".payoff"
-  val QueriesSuffix = ".queries"
-  val SelectionSuffix = ".selection"
-  val PropertiesSuffix = ".properties"
-  val FieldSplitter = "\\s+"
-  val FieldSeparator = " "
 
   def fromBasename(basename: String): QueryShardExperiment = {
 
