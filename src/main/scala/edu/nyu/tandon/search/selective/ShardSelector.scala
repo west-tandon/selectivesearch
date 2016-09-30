@@ -39,7 +39,7 @@ class ShardSelector(val queryShardExperiment: QueryShardExperiment,
   def write(outputStream: OutputStream): Unit = {
     val writer = new BufferedWriter(new OutputStreamWriter(outputStream))
     for (q <- this) {
-      writer.append(q.mkString(QueryShardExperiment.FieldSeparator))
+      writer.append(q.mkString(FieldSeparator))
       writer.newLine()
     }
     writer.close()
@@ -83,7 +83,7 @@ object ShardSelector {
 
         val experiment = QueryShardExperiment.fromBasename(config.basename)
         val shardSelector = new ShardSelector(experiment, config.budget)
-        shardSelector.write(config.basename + QueryShardExperiment.SelectionSuffix)
+        shardSelector.write(config.basename + SelectionSuffix)
 
       case None =>
     }
