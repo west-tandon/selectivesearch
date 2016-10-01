@@ -4,6 +4,7 @@ import java.io._
 
 import edu.nyu.tandon.search.selective.ShardSelector.binsWithinBudget
 import edu.nyu.tandon.search.selective.data.{Bin, QueryShardExperiment, ShardQueue}
+import edu.nyu.tandon.search.selective.data.results._
 import scopt.OptionParser
 
 /**
@@ -33,17 +34,7 @@ class ShardSelector(val queryShardExperiment: QueryShardExperiment,
     }
   }
 
-  def write(outputFile: String): Unit =
-    write(new FileOutputStream(outputFile))
-
-  def write(outputStream: OutputStream): Unit = {
-    val writer = new BufferedWriter(new OutputStreamWriter(outputStream))
-    for (q <- this) {
-      writer.append(q.mkString(FieldSeparator))
-      writer.newLine()
-    }
-    writer.close()
-  }
+  def selection: Stream[Seq[Int]] = toStream
 
 }
 
@@ -59,6 +50,24 @@ object ShardSelector {
     }.unzip._1.unzip._1
   }
 
+  def writeSelection(basename: String, selection: Iterable[Seq[Int]]): Unit = {
+    val writer = new BufferedWriter(new FileWriter(s"$basename$SelectionSuffix"))
+    for (q <- selection) {
+      writer.append(q.mkString(FieldSeparator))
+      writer.newLine()
+    }
+    writer.close()
+  }
+
+  def writeSelected(basename: String, selected: Iterable[Seq[Result]]): Unit = {
+    val writer = new BufferedWriter(new FileWriter(s"$basename$SelectedSuffix"))
+    for (q <- selected) {
+      writer.append(q.map(_.documentId).mkString(FieldSeparator))
+      writer.newLine()
+    }
+    writer.close()
+  }
+
   def main(args: Array[String]): Unit = {
 
     case class Config(basename: String = null,
@@ -66,7 +75,7 @@ object ShardSelector {
 
     val parser = new OptionParser[Config](this.getClass.getSimpleName) {
 
-      opt[String]('n', "basename")
+      opt[String]('i', "basename")
         .action((x, c) => c.copy(basename = x))
         .text("the prefix of the files")
         .required()
@@ -82,8 +91,9 @@ object ShardSelector {
       case Some(config) =>
 
         val experiment = QueryShardExperiment.fromBasename(config.basename)
-        val shardSelector = new ShardSelector(experiment, config.budget)
-        shardSelector.write(config.basename + SelectionSuffix)
+        val selection = new ShardSelector(experiment, config.budget).selection
+        writeSelection(config.basename, selection)
+        writeSelected(config.basename, resultsByShardsAndBinsFromBasename(config.basename).select(selection))
 
       case None =>
     }
