@@ -1,13 +1,14 @@
 package edu.nyu.tandon.search.selective.data.results
 
-import edu.nyu.tandon._
+import edu.nyu.tandon.utils.BulkIterator
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class GroupedResults(sequence: Iterable[FlatResults]) extends Iterable[FlatResults] {
-  override def iterator: Iterator[FlatResults] = sequence.iterator
-  def store(basename: String): Unit = for ((bin, b) <- this.zipWithIndex) bin.store(s"$basename#$b")
+class GroupedResults(val sequence: Seq[FlatResults]) extends Iterable[Seq[ResultLine]] {
+  override def iterator: Iterator[Seq[ResultLine]] = new BulkIterator[ResultLine](sequence.map(_.iterator))
+  def store(basename: String): Unit = for ((bin, b) <- sequence.zipWithIndex) bin.store(s"$basename#$b")
   def partition(partitionSize: Long, partitionCount: Int): GroupedGroupedResults =
-    new GroupedGroupedResults(this map (_.partition(partitionSize, partitionCount)))
+    new GroupedGroupedResults(sequence map (_.partition(partitionSize, partitionCount)))
+  def hasScores: Boolean = sequence.head.hasScores
 }

@@ -10,6 +10,7 @@ package object selective {
   val PayoffSuffix = ".payoff"
   val QueriesSuffix = ".queries"
   val SelectionSuffix = ".selection"
+  val SelectedSuffix = ".selected"
   val ResultsSuffix = ".results"
   val ScoresSuffix = ".scores"
 

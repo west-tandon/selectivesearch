@@ -27,4 +27,6 @@ class BaseFunSuite extends FunSuite {
     tmpDir
   }
 
+  def resourcesPath: String = getClass.getResource("/").getPath
+
 }
