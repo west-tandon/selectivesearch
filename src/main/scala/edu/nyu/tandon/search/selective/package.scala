@@ -11,10 +11,13 @@ package object selective {
   val QueriesSuffix = ".queries"
   val SelectionSuffix = ".selection"
   val ResultsSuffix = ".results"
+  val ScoresSuffix = ".scores"
 
   val FieldSplitter = "\\s+"
   val FieldSeparator = " "
 
   val NestingIndicator = "#"
+
+  def base(nestedBasename: String): String = nestedBasename.takeWhile(c => s"$c" != NestingIndicator)
 
 }

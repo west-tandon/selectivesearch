@@ -13,7 +13,36 @@ import scala.io.Source
   */
 class BinnifyResultsTest extends BaseFunSuite {
 
-  trait Files {
+  trait FilesWithScores {
+    val outputFileNames = Seq(
+      Seq(
+        s"test#0#0$ResultsSuffix",
+        s"test#0#1$ResultsSuffix",
+        s"test#0#2$ResultsSuffix",
+        s"test#0#0$ScoresSuffix",
+        s"test#0#1$ScoresSuffix",
+        s"test#0#2$ScoresSuffix"
+      ),
+      Seq(
+        s"test#1#0$ResultsSuffix",
+        s"test#1#1$ResultsSuffix",
+        s"test#1#2$ResultsSuffix",
+        s"test#1#0$ScoresSuffix",
+        s"test#1#1$ScoresSuffix",
+        s"test#1#2$ScoresSuffix"
+      ),
+      Seq(
+        s"test#2#0$ResultsSuffix",
+        s"test#2#1$ResultsSuffix",
+        s"test#2#2$ResultsSuffix",
+        s"test#2#0$ScoresSuffix",
+        s"test#2#1$ScoresSuffix",
+        s"test#2#2$ScoresSuffix"
+      )
+    )
+  }
+
+  trait FilesWithoutScores {
     val outputFileNames = Seq(
       Seq(
         s"test#0#0$ResultsSuffix",
@@ -47,163 +76,10 @@ class BinnifyResultsTest extends BaseFunSuite {
     }
   }
 
-  test("groupByBins") {
-    groupByBins(Array(1, 2, 3, 99, 100, 101, 104, 105, 106, 199, 200, 201, 207, 208), 100, 3) should contain theSameElementsInOrderAs List(
-      Array(1, 2, 3, 99),
-      Array(100, 101, 104, 105, 106, 199),
-      Array(200, 201, 207, 208)
-    )
-  }
-
-  test("binnifyShard") {
-    // given
-    val expected = Seq(
-      Vector(
-        Array(0, 1),
-        Array(100, 101),
-        Array(200, 201)
-      )
-    )
-
-    // when
-    val actual = binnifyShard(Source.fromString("0 1 100 101 200 201"), 3, 300).toSeq
-
-    // then
-    actual.length shouldBe expected.length
-    actual.head should contain theSameElementsInOrderAs expected.head
-  }
-
-  test("binnifyShard: from file") {
-    // given
-    val expected = Seq(
-      Vector(
-        Array(1, 2, 3),
-        Array(104, 105, 106),
-        Array(207, 208)
-      ),
-      Vector(
-        Array(1, 2, 3),
-        Array(104, 105, 106),
-        Array(207, 208)
-      ),
-      Vector(
-        Array(1, 2, 3),
-        Array(104, 105, 106),
-        Array(207, 208)
-      )
-    )
-
-    // when
-    val actual = binnifyShard(getClass.getResource("/").getPath + "test", 0, 3, 300).toSeq
-
-    // then
-    actual.length shouldBe expected.length
-    for ((a, e) <- (actual, expected).zipped) a should contain theSameElementsInOrderAs e
-  }
-
-
-
-  test("binnify") {
-    // given
-    val expected = Seq(
-      Seq(
-        Vector(
-          Array(1, 2, 3),
-          Array(104, 105, 106),
-          Array(207, 208)
-        ),
-        Vector(
-          Array(1, 2, 3),
-          Array(104, 105, 106),
-          Array(207, 208)
-        ),
-        Vector(
-          Array(1, 2, 3),
-          Array(104, 105, 106),
-          Array(207, 208)
-        )
-      ),
-      Seq(
-        Vector(
-          Array(11, 12, 13),
-          Array(114, 115, 116),
-          Array(217, 218)
-        ),
-        Vector(
-          Array(11, 12, 13),
-          Array(114, 115, 116),
-          Array(217, 218)
-        ),
-        Vector(
-          Array(11, 12, 13),
-          Array(114, 115, 116),
-          Array(217, 218)
-        )
-      ),
-      Seq(
-        Vector(
-          Array(21, 22, 23),
-          Array(124, 125, 126),
-          Array(227, 228)
-        ),
-        Vector(
-          Array(21, 22, 23),
-          Array(124, 125, 126),
-          Array(227, 228)
-        ),
-        Vector(
-          Array(21, 22, 23),
-          Array(124, 125, 126),
-          Array(227, 228)
-        )
-      )
-    )
-
-    // when
-    val actual = binnify(getClass.getResource("/").getPath + "test", 3, 3, 300)
-
-    // then
-    actual.length shouldBe expected.length
-    for ((ai, ei) <- (actual, expected).zipped)
-      for ((a, e) <- (ai.toSeq, ei).zipped)
-        a should contain theSameElementsInOrderAs e
-  }
-
-  test("writeBinnifiedShard") {
-    new Files {
+  test("main: shard with scores") {
+    new FilesWithScores {
       // given
-      val tmpDir = Files.createTempDirectory(null)
-      val binnified = Seq(
-        Vector(
-          Array(1, 2, 3),
-          Array(104, 105, 106),
-          Array(207, 208)
-        ),
-        Vector(
-          Array(1, 2, 3),
-          Array(104, 105, 106),
-          Array(207, 208)
-        ),
-        Vector(
-          Array(1, 2, 3),
-          Array(104, 105, 106),
-          Array(207, 208)
-        )
-      ).iterator map (_ map (_ map (_.toLong)))
-      val files = outputFileNames.head
-
-      // when
-      writeBinnifiedShard(s"${tmpDir.toString}/test#0", 3, binnified)
-
-      // then
-      compareFilesBetweenDirectories(files, getClass.getResource("/").getPath, tmpDir.toString)
-    }
-  }
-
-  test("main: shard") {
-    new Files {
-      // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|.*properties")
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|test#.\\.scores|.*properties|.*queries")
 
       // when
       BinnifyResults.main(Array("--basename", s"$tmpDir/test#0"))
@@ -215,10 +91,36 @@ class BinnifyResultsTest extends BaseFunSuite {
     }
   }
 
-  test("main: all") {
-    new Files {
+  test("main: shard without scores") {
+    new FilesWithoutScores {
       // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|.*properties")
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|.*properties|.*queries")
+
+      // when
+      BinnifyResults.main(Array("--basename", s"$tmpDir/test#0"))
+
+      // then
+      compareFilesBetweenDirectories(outputFileNames.head, getClass.getResource("/").getPath, tmpDir.toString)
+    }
+  }
+
+  test("main: all with scores") {
+    new FilesWithScores {
+      // given
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|test#.\\.scores|.*properties|.*queries")
+
+      // when
+      BinnifyResults.main(Array("--basename", s"$tmpDir/test"))
+
+      // then
+      compareFilesBetweenDirectories(outputFileNames.flatten, getClass.getResource("/").getPath, tmpDir.toString)
+    }
+  }
+
+  test("main: all without scores") {
+    new FilesWithoutScores {
+      // given
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|.*properties|.*queries")
 
       // when
       BinnifyResults.main(Array("--basename", s"$tmpDir/test"))
