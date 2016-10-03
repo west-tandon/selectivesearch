@@ -12,5 +12,8 @@ class GroupedGroupedResults(val sequence: Seq[GroupedResults]) extends Iterable[
   def select(selector: Iterable[Seq[Int]]): Iterable[Seq[Result]] =
     for ((results, selection) <- this zip selector) yield
       (for ((shardResults, numOfBins) <- results zip selection) yield
-        shardResults.take(numOfBins).flatten).flatten
+        shardResults.take(numOfBins).flatten).flatten.sortBy(_.score match {
+        case None => 0
+        case Some(s) => -s
+      })
 }

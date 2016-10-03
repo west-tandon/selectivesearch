@@ -60,12 +60,21 @@ object ShardSelector {
   }
 
   def writeSelected(basename: String, selected: Iterable[Seq[Result]]): Unit = {
-    val writer = new BufferedWriter(new FileWriter(s"$basename$SelectedSuffix"))
+    val documentsWriter = new BufferedWriter(new FileWriter(s"$basename$SelectedSuffix$ResultsSuffix"))
     for (q <- selected) {
-      writer.append(q.map(_.documentId).mkString(FieldSeparator))
-      writer.newLine()
+      documentsWriter.append(q.map(_.documentId).mkString(FieldSeparator))
+      documentsWriter.newLine()
     }
-    writer.close()
+    documentsWriter.close()
+  }
+
+  def writeSelectedScores(basename: String, selected: Iterable[Seq[Result]]): Unit = {
+    val scoresWriter = new BufferedWriter(new FileWriter(s"$basename$SelectedSuffix$ScoresSuffix"))
+    for (q <- selected) {
+      scoresWriter.append(q.map(_.scoreValue).mkString(FieldSeparator))
+      scoresWriter.newLine()
+    }
+    scoresWriter.close()
   }
 
   def main(args: Array[String]): Unit = {
@@ -93,7 +102,10 @@ object ShardSelector {
         val experiment = QueryShardExperiment.fromBasename(config.basename)
         val selection = new ShardSelector(experiment, config.budget).selection
         writeSelection(config.basename, selection)
-        writeSelected(config.basename, resultsByShardsAndBinsFromBasename(config.basename).select(selection))
+        val r = resultsByShardsAndBinsFromBasename(config.basename)
+        val selected = r.select(selection)
+        writeSelected(config.basename, selected)
+        if (r.hasScores) writeSelectedScores(config.basename, selected)
 
       case None =>
     }
