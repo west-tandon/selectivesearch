@@ -13,6 +13,9 @@ package object selective {
   val SelectedSuffix = ".selected"
   val ResultsSuffix = ".results"
   val ScoresSuffix = ".scores"
+  val TrecSuffix = ".trec"
+  val TrecIdSuffix = ".trecid"
+  val TitlesSuffix = ".titles"
 
   val FieldSplitter = "\\s+"
   val FieldSeparator = " "

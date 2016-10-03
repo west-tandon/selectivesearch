@@ -1,10 +1,7 @@
 package edu.nyu.tandon.search.selective
 
-import java.io.ByteArrayOutputStream
-
 import edu.nyu.tandon.search.selective.data.{Bin, QueryShardExperiment}
 import edu.nyu.tandon.test.BaseFunSuite
-import org.scalatest.FunSuite
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -82,24 +79,21 @@ class ShardSelectorTest extends BaseFunSuite {
     }
   }
 
-//  test("write selector") {
-//    new Selector {
-//      // given
-//      val os = new ByteArrayOutputStream()
-//
-//      // when
-//      selector.writeSelection(os)
-//
-//      // then
-//      assert(os.toString === new StringBuilder()
-//        .append("0 3 2\n")
-//        .append("2 0 0\n")
-//        .append("1 2 2\n")
-//        .toString())
-//    }
-//  }
+  test("main: with scores") {
+    // given
+    val tmpDir = createTemporaryCopyOfResources(regex = ".*results|.*scores|.*properties|.*queries|.*payoff|.*cost")
 
-  test("main") {
+    // when
+    ShardSelector.main(Array(
+      "--basename", s"$tmpDir/test",
+      "--budget", "5"
+    ))
+
+    // then
+    compareFilesBetweenDirectories(Seq("test.selection", "test.selected.results", "test.selected.scores"), resourcesPath, tmpDir.toString)
+  }
+
+  test("main: without scores") {
     // given
     val tmpDir = createTemporaryCopyOfResources(regex = ".*results|.*properties|.*queries|.*payoff|.*cost")
 
@@ -110,7 +104,7 @@ class ShardSelectorTest extends BaseFunSuite {
     ))
 
     // then
-    compareFilesBetweenDirectories(Seq("test.selection", "test.selected"), resourcesPath, tmpDir.toString)
+    compareFilesBetweenDirectories(Seq("test.selection"), resourcesPath, tmpDir.toString)
   }
 
 }
