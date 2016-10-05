@@ -73,8 +73,7 @@ class ShardSelectorTest extends BaseFunSuite {
       // then
       assert(l === List(
         List(0, 3, 2),
-        List(2, 0, 0),
-        List(1, 2, 2)
+        List(2, 0, 0)
       ))
     }
   }
