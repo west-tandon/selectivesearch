@@ -21,6 +21,8 @@ class BaseFunSuite extends FunSuite {
       Source.fromFile(f1).getLines().toSeq should contain theSameElementsInOrderAs Source.fromFile(f2).getLines().toSeq
     }
 
+  def createTemporaryDir(): Path = Files.createTempDirectory(null)
+
   def createTemporaryCopyOfResources(regex: String): Path = {
     val tmpDir = Files.createTempDirectory(null)
     FileUtils.copyDirectory(Paths.get(getClass.getResource("/").getPath).toFile, tmpDir.toFile, new RegexFileFilter(regex))

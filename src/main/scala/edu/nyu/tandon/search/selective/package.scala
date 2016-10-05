@@ -1,5 +1,11 @@
 package edu.nyu.tandon.search
 
+import edu.nyu.tandon._
+import edu.nyu.tandon.utils.ZippableSeq
+import scala.language.implicitConversions
+
+import scalax.io.Resource
+
 /**
   * @author michal.siedlaczek@nyu.edu
   */
@@ -9,6 +15,7 @@ package object selective {
   val DivisionSuffix = ".division"
   val PayoffSuffix = ".payoff"
   val QueriesSuffix = ".queries"
+  val QueryLengthsSuffix = ".qlen"
   val SelectionSuffix = ".selection"
   val SelectedSuffix = ".selected"
   val ResultsSuffix = ".results"
@@ -16,6 +23,11 @@ package object selective {
   val TrecSuffix = ".trec"
   val TrecIdSuffix = ".trecid"
   val TitlesSuffix = ".titles"
+  val ReDDESuffix = ".redde"
+  val ShRkCSuffix = ".shrkc"
+  val LabelSuffix = ".label"
+  val ModelSuffix = ".model"
+  val EvalSuffix = ".eval"
 
   val FieldSplitter = "\\s+"
   val FieldSeparator = " "
@@ -23,5 +35,22 @@ package object selective {
   val NestingIndicator = "#"
 
   def base(nestedBasename: String): String = nestedBasename.takeWhile(c => s"$c" != NestingIndicator)
+
+  def shardLevelSequence[T](basename: String, suffix: String, converter: String => T): Iterable[Seq[Seq[T]]] = {
+    val shardCount = loadProperties(basename).getProperty("shards.count").toInt
+    new ZippableSeq(
+      for (s <- 0 until shardCount) yield
+        Resource.fromFile(s"$basename#$s$suffix").lines()
+          .map(_.split(FieldSplitter).toSeq.map(converter)).toIterable
+    ).zipped
+  }
+
+  def shardLevelValue[T](basename: String, suffix: String, converter: String => T): Iterable[Seq[T]] = {
+    val shardCount = loadProperties(basename).getProperty("shards.count").toInt
+    new ZippableSeq(
+      for (s <- 0 until shardCount) yield
+        Resource.fromFile(s"$basename#$s$suffix").lines().map(converter).toIterable
+    ).zipped
+  }
 
 }

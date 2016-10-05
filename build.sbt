@@ -9,5 +9,8 @@ libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "2.2.6" % "test",
   "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
   "commons-io" % "commons-io" % "2.5",
-  "com.github.scala-incubator.io" %% "scala-io-core" % "0.4.3-1"
+  "com.github.scala-incubator.io" %% "scala-io-core" % "0.4.3-1",
+  "org.apache.spark" %% "spark-core" % "2.0.0",
+  "org.apache.spark" %% "spark-mllib" % "2.0.0"
+//  "org.scalanlp" %% "breeze-natives" % "0.12"
 )
