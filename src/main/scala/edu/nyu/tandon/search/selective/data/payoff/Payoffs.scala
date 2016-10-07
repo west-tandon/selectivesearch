@@ -36,7 +36,7 @@ object Payoffs {
 
   implicit def doubleSeqSeqIterable2Payoffs(payoffs: Iterable[Seq[Seq[Double]]]): Payoffs = new Payoffs(payoffs)
 
-  def fromPayoffs(basename: String): Payoffs = shardLevelSequence(basename, PayoffSuffix, _.toDouble)
+  def fromPayoffs(basename: String): Payoffs = bucketLevelValue(basename, PayoffSuffix, _.toDouble)
 
   def fromResults(basename: String): Payoffs = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
