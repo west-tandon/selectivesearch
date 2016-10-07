@@ -2,8 +2,8 @@ package edu.nyu.tandon.search.selective
 
 import java.io._
 
-import edu.nyu.tandon.search.selective.ShardSelector.binsWithinBudget
-import edu.nyu.tandon.search.selective.data.{Bin, QueryShardExperiment, ShardQueue}
+import edu.nyu.tandon.search.selective.ShardSelector.bucketsWithinBudget
+import edu.nyu.tandon.search.selective.data.{Bucket, QueryShardExperiment, ShardQueue}
 import edu.nyu.tandon.search.selective.data.results._
 import scopt.OptionParser
 
@@ -15,11 +15,11 @@ class ShardSelector(val queryShardExperiment: QueryShardExperiment,
   extends Iterable[Seq[Int]] {
 
   /**
-    * Get the number of bins to query for each shard.
+    * Get the number of buckets to query for each shard.
     */
   def selectedShards(queue: ShardQueue): Seq[Int] = {
-    val bins = queue.toList
-    val m = binsWithinBudget(bins, budget)
+    val buckets = queue.toList
+    val m = bucketsWithinBudget(buckets, budget)
       .groupBy(_.shardId)
       .mapValues(_.length)
       .withDefaultValue(0)
@@ -41,12 +41,12 @@ class ShardSelector(val queryShardExperiment: QueryShardExperiment,
 object ShardSelector {
 
   /**
-    * Choose the bins within the budget
+    * Choose the buckets within the budget
     */
-  def binsWithinBudget(bins: List[Bin], budget: Double): List[Bin] = {
-    val budgets = bins.scanLeft(budget)((budgetLeft, bin) => budgetLeft - bin.cost)
-    bins.zip(budgets).zipWithIndex.takeWhile {
-      case ((bin: Bin, budget: Double), i: Int) => (budget - bin.cost >= 0 && bin.payoff > 0) || i == 0
+  def bucketsWithinBudget(buckets: List[Bucket], budget: Double): List[Bucket] = {
+    val budgets = buckets.scanLeft(budget)((budgetLeft, bucket) => budgetLeft - bucket.cost)
+    buckets.zip(budgets).zipWithIndex.takeWhile {
+      case ((bucket: Bucket, budget: Double), i: Int) => (budget - bucket.cost >= 0 && bucket.payoff > 0) || i == 0
     }.unzip._1.unzip._1
   }
 
@@ -102,7 +102,7 @@ object ShardSelector {
         val experiment = QueryShardExperiment.fromBasename(config.basename)
         val selection = new ShardSelector(experiment, config.budget).selection
         writeSelection(config.basename, selection)
-        val r = resultsByShardsAndBinsFromBasename(config.basename)
+        val r = resultsByShardsAndBucketsFromBasename(config.basename)
         val selected = r.select(selection)
         writeSelected(config.basename, selected)
         if (r.hasScores) writeSelectedScores(config.basename, selected)

@@ -70,7 +70,7 @@ class ResultLineTest extends BaseFunSuite {
 
   test("partition: with scores") {
     new ResultsWithScores {
-      val grouped = results.groupByBins(partitionSize = 2, partitionCount = 3)
+      val grouped = results.groupByBuckets(partitionSize = 2, partitionCount = 3)
       for (group <- grouped) group.query shouldBe results.query
       grouped.head.documentIds should contain theSameElementsInOrderAs Seq(1)
       grouped.head.getScores should contain theSameElementsInOrderAs Seq(5.0)
@@ -83,7 +83,7 @@ class ResultLineTest extends BaseFunSuite {
 
   test("partition: without scores") {
     new ResultsWithoutScores {
-      val grouped = results.groupByBins(partitionSize = 2, partitionCount = 3)
+      val grouped = results.groupByBuckets(partitionSize = 2, partitionCount = 3)
       for (group <- grouped) group.query shouldBe results.query
       grouped.head.documentIds should contain theSameElementsInOrderAs Seq(1)
       grouped.head.hasScores shouldBe false

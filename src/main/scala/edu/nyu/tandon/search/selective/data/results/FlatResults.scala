@@ -15,11 +15,11 @@ class FlatResults(val sequence: Iterable[ResultLine], val hasScores: Boolean) ex
   override def iterator: Iterator[ResultLine] = sequence.iterator
 
   def partition(partitionSize: Long, partitionCount: Int): GroupedResults = {
-    val x = this map (_.groupByBins(partitionSize, partitionCount))
+    val x = this map (_.groupByBuckets(partitionSize, partitionCount))
     new GroupedResults(
       for (b <- 0 until partitionCount)
         yield {
-          new FlatResults(this.map(_.groupByBins(partitionSize, partitionCount)(b)), hasScores)
+          new FlatResults(this.map(_.groupByBuckets(partitionSize, partitionCount)(b)), hasScores)
         }
     )
   }

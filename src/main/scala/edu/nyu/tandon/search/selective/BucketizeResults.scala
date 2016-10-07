@@ -7,7 +7,7 @@ import scopt.OptionParser
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-object BinnifyResults {
+object BucketizeResults {
 
   def parseBasename(basename: String): (String, Option[Int]) = {
     val s = basename.split(NestingIndicator)
@@ -36,18 +36,18 @@ object BinnifyResults {
 
         val properties = loadProperties(basename)
         val shardCount = properties.getProperty("shards.count").toInt
-        val binCount = properties.getProperty("bins.count").toInt
+        val bucketCount = properties.getProperty("buckets.count").toInt
         val maxId = properties.getProperty("maxId").toLong
 
         shard match {
           case Some(shardId) =>
             FlatResults
               .fromBasename(config.basename)
-              .partition(math.ceil(maxId.toDouble / binCount.toDouble).toLong, binCount)
+              .partition(math.ceil(maxId.toDouble / bucketCount.toDouble).toLong, bucketCount)
               .store(config.basename)
           case None          =>
             resultsByShardsFromBasename(basename)
-              .partition(math.ceil(maxId.toDouble / binCount.toDouble).toLong, binCount)
+              .partition(math.ceil(maxId.toDouble / bucketCount.toDouble).toLong, bucketCount)
               .store(basename)
         }
 

@@ -2,7 +2,7 @@ package edu.nyu.tandon.search.selective
 
 import java.nio.file.{Files, Paths}
 
-import edu.nyu.tandon.search.selective.BinnifyResults._
+import edu.nyu.tandon.search.selective.BucketizeResults._
 import edu.nyu.tandon.test.BaseFunSuite
 import org.scalatest.Matchers._
 
@@ -11,7 +11,7 @@ import scala.io.Source
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class BinnifyResultsTest extends BaseFunSuite {
+class BucketizeResultsTest extends BaseFunSuite {
 
   trait FilesWithScores {
     val outputFileNames = Seq(
@@ -82,7 +82,7 @@ class BinnifyResultsTest extends BaseFunSuite {
       val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|test#.\\.scores|.*properties|.*queries")
 
       // when
-      BinnifyResults.main(Array("--basename", s"$tmpDir/test#0"))
+      BucketizeResults.main(Array("--basename", s"$tmpDir/test#0"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.head, getClass.getResource("/").getPath, tmpDir.toString)
@@ -97,7 +97,7 @@ class BinnifyResultsTest extends BaseFunSuite {
       val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|.*properties|.*queries")
 
       // when
-      BinnifyResults.main(Array("--basename", s"$tmpDir/test#0"))
+      BucketizeResults.main(Array("--basename", s"$tmpDir/test#0"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.head, getClass.getResource("/").getPath, tmpDir.toString)
@@ -110,7 +110,7 @@ class BinnifyResultsTest extends BaseFunSuite {
       val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|test#.\\.scores|.*properties|.*queries")
 
       // when
-      BinnifyResults.main(Array("--basename", s"$tmpDir/test"))
+      BucketizeResults.main(Array("--basename", s"$tmpDir/test"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.flatten, getClass.getResource("/").getPath, tmpDir.toString)
@@ -123,7 +123,7 @@ class BinnifyResultsTest extends BaseFunSuite {
       val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|.*properties|.*queries")
 
       // when
-      BinnifyResults.main(Array("--basename", s"$tmpDir/test"))
+      BucketizeResults.main(Array("--basename", s"$tmpDir/test"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.flatten, getClass.getResource("/").getPath, tmpDir.toString)

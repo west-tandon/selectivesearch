@@ -55,7 +55,7 @@ package object selective {
 
   def bucketLevelValue[T](basename: String, suffix: String, converter: String => T): Iterable[Seq[Seq[T]]] = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
-    val bucketCount = loadProperties(basename).getProperty("bins.count").toInt
+    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
     new ZippableSeq(
       for (s <- 0 until shardCount) yield
         new ZippableSeq(

@@ -37,7 +37,7 @@ class ResultLine(val query: String,
 
   }
 
-  def groupByBins(partitionSize: Long, partitionCount: Int): Seq[ResultLine] = {
+  def groupByBuckets(partitionSize: Long, partitionCount: Int): Seq[ResultLine] = {
     val m = this.groupBy(_.documentId / partitionSize).mapValues(_.toSeq).withDefaultValue(Seq())
     for (i <- 0 until partitionCount)
       yield new ResultLine(query,

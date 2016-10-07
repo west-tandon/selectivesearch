@@ -40,11 +40,11 @@ object Payoffs {
 
   def fromResults(basename: String): Payoffs = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
-    val binCount = loadProperties(basename).getProperty("bins.count").toInt
+    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
     val globalResults = lines(s"$basename$ResultsSuffix").map(lineToLongs(_).sorted)
     new Payoffs(
       new ZippableSeq(for (s <- 0 until shardCount) yield
-        new ZippableSeq(for (b <- 0 until binCount) yield {
+        new ZippableSeq(for (b <- 0 until bucketCount) yield {
           val shardResultsSorted = lines(s"$basename#$s#$b$ResultsSuffix").map(lineToLongs(_).sorted)
           val filteredShardResults = globalResults.zip(shardResultsSorted) map {
             case (global, shard) => shard.count(global.contains(_)).toDouble
@@ -56,7 +56,7 @@ object Payoffs {
   }
 
   def fromRegressionModel(basename: String, model: RandomForestRegressionModel): Payoffs = {
-    val binCount = loadProperties(basename).getProperty("bins.count").toInt
+    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
 
     val lengths = Resource.fromFile(s"$basename$QueryLengthsSuffix").lines().map(_.toDouble).toIterable
     val redde = shardLevelValue(basename, ReDDESuffix, _.toDouble)
@@ -67,13 +67,13 @@ object Payoffs {
       for (((queryLength, reddeScores), shrkcScores) <- lengths.zip(redde).zip(shrkc)) yield
         // For each shard
         for ((shardReddeScore, shardShrkcScore) <- reddeScores zip shrkcScores) yield
-          // For each bin
-          for (bin <- 0 until binCount) yield {
+          // For each bucket
+          for (bucket <- 0 until bucketCount) yield {
             val df = SparkSession.builder()
               .master("local[*]")
               .appName(Payoffs.getClass.getName)
               .getOrCreate()
-              .createDataFrame(Seq((Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bin.toDouble), 0.0)))
+              .createDataFrame(Seq((Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble), 0.0)))
               .withColumnRenamed("_1", LearnPayoffs.FeaturesColumn)
             val prediction = model.transform(df)
             prediction.toLocalIterator().next().getAs[Double](LearnPayoffs.LabelColumn)

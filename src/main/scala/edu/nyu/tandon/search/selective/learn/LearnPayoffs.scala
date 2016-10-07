@@ -25,8 +25,8 @@ object LearnPayoffs {
     val labels = Payoffs.fromResults(basename)
     val data = for ((((queryLength, reddeScores), shrkcScores), payoffs) <- lengths.zip(redde).zip(shrkc).zip(labels);
          ((shardReddeScore, shardShrkcScore), shardPayoffs) <- reddeScores.zip(shrkcScores).zip(payoffs);
-         (payoff, bin) <- shardPayoffs.zipWithIndex)
-      yield (Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bin.toDouble), payoff)
+         (payoff, bucket) <- shardPayoffs.zipWithIndex)
+      yield (Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble), payoff)
     SparkSession.builder()
       .master("local[*]")
       .appName(LearnPayoffs.getClass.getName)
