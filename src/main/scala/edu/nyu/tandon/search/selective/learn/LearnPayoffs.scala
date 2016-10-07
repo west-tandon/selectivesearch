@@ -22,7 +22,7 @@ object LearnPayoffs {
     val lengths = Resource.fromFile(s"$basename$QueryLengthsSuffix").lines().map(_.toDouble).toIterable
     val redde = shardLevelValue(basename, ReDDESuffix, _.toDouble)
     val shrkc = shardLevelValue(basename, ShRkCSuffix, _.toDouble)
-    val labels = Payoffs.fromResults(basename)
+    val labels = Payoffs.fromPayoffs(basename)
     val data = for ((((queryLength, reddeScores), shrkcScores), payoffs) <- lengths.zip(redde).zip(shrkc).zip(labels);
          ((shardReddeScore, shardShrkcScore), shardPayoffs) <- reddeScores.zip(shrkcScores).zip(payoffs);
          (payoff, bucket) <- shardPayoffs.zipWithIndex)

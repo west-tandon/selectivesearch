@@ -35,7 +35,6 @@ object BucketizeResults {
         val (basename: String, shard: Option[Int]) = parseBasename(config.basename)
 
         val properties = loadProperties(basename)
-        val shardCount = properties.getProperty("shards.count").toInt
         val bucketCount = properties.getProperty("buckets.count").toInt
         val maxId = properties.getProperty("maxId").toLong
 

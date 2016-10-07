@@ -22,12 +22,19 @@ class Payoffs(val payoffs: Iterable[Seq[Seq[Double]]]) extends Iterable[Seq[Seq[
 
   def store(basename: String): Unit = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
-    val shardWriters = for (s <- 0 until shardCount) yield
-        new FileWriter(s"$basename#$s$PayoffSuffix")
-    for (queryPayoffs <- payoffs)
-      for ((shardPayoffs, writer) <- queryPayoffs zip shardWriters)
-        writer.append(shardPayoffs.mkString(FieldSeparator)).append("\n")
-    for (w <- shardWriters) w.close()
+    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
+
+    val writers =
+      for (s <- 0 until shardCount) yield
+        for (b <- 0 until bucketCount) yield
+          new FileWriter(s"$basename#$s#$b$PayoffSuffix")
+
+    for (queryPayoffs <- payoffs;
+        (shardPayoffs, shardWriters) <- queryPayoffs zip writers;
+        (payoff, writer) <- shardPayoffs zip shardWriters
+    ) writer.append(s"$payoff\n")
+
+    for (wl <- writers; w <- wl) w.close()
   }
 
 }
