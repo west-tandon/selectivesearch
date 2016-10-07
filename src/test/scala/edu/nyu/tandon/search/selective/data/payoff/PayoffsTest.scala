@@ -26,13 +26,13 @@ class PayoffsTest extends BaseFunSuite {
   test("fromPayoffs") {
     new ExpectedPayoffs {
       val actual = Payoffs.fromPayoffs(s"$resourcesPath/test")
-      for ((sa, se) <- actual.zip(expected))
-        for ((a, e) <- sa.zip(se))
+      for ((sa, se) <- actual.zipAll(expected, Seq(), Seq()))
+        for ((a, e) <- sa.zipAll(se, Seq(), Seq()))
           a should contain theSameElementsAs e
     }
   }
 
-  test("fromPayoofs/store") {
+  test("fromPayoffs/store") {
     val tempDir = createTemporaryCopyOfResources(".*properties")
     Payoffs.fromPayoffs(s"$resourcesPath/test").store(s"${tempDir.toString}/test")
     compareFilesBetweenDirectories(Seq(), tempDir.toString, resourcesPath)
@@ -41,8 +41,8 @@ class PayoffsTest extends BaseFunSuite {
   test("fromResults") {
     new ExpectedPayoffs {
       val actual = Payoffs.fromResults(s"$resourcesPath/test")
-      for ((sa, se) <- actual.zip(expected))
-        for ((a, e) <- sa.zip(se))
+      for ((sa, se) <- actual.zipAll(expected, Seq(), Seq()))
+        for ((a, e) <- sa.zipAll(se, Seq(), Seq()))
           a should contain theSameElementsAs e
     }
   }
