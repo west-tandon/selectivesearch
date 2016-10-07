@@ -11,8 +11,8 @@ class GroupedGroupedResults(val sequence: Seq[GroupedResults]) extends Iterable[
   def store(basename: String): Unit = for ((shard, s) <- sequence.zipWithIndex) shard.store(s"$basename#$s")
   def select(selector: Iterable[Seq[Int]]): Iterable[Seq[Result]] =
     for ((results, selection) <- this zip selector) yield
-      (for ((shardResults, numOfBins) <- results zip selection) yield
-        shardResults.take(numOfBins).flatten).flatten.sortBy(_.score match {
+      (for ((shardResults, numOfBuckets) <- results zip selection) yield
+        shardResults.take(numOfBuckets).flatten).flatten.sortBy(_.score match {
         case None => 0
         case Some(s) => -s
       })

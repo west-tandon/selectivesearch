@@ -45,11 +45,11 @@ class QueryShardExperiment(val querySource: BufferedSource,
         val nextPayoffs: Seq[List[Double]] = payoffs map (_.map(_.next().toDouble).toList)
         val nextCosts:   Seq[List[Double]] = costs map (_.map(_.next().toDouble).toList)
 
-        val binsByShard = (nextPayoffs zip nextCosts).zipWithIndex map {
-          case ((pl, cl), shardId) => (pl zip cl) map { case (p, c) => Bin(shardId, p, c) }
+        val bucketsByShard = (nextPayoffs zip nextCosts).zipWithIndex map {
+          case ((pl, cl), shardId) => (pl zip cl) map { case (p, c) => Bucket(shardId, p, c) }
         }
 
-        new QueryData(nextQuery, binsByShard)
+        new QueryData(nextQuery, bucketsByShard)
       }
 
     }
@@ -67,14 +67,14 @@ object QueryShardExperiment {
     val properties = new Properties()
     properties.load(new FileInputStream(s"$basename$PropertiesSuffix"))
     val shardCount = properties.getProperty("shards.count").toInt
-    val binCount = properties.getProperty("bins.count").toInt
+    val bucketCount = properties.getProperty("buckets.count").toInt
 
     new QueryShardExperiment(
       Source.fromFile(s"$basename$QueriesSuffix"),
       for (i <- 0 until shardCount) yield
-        for (b <- 0 until binCount) yield Source.fromFile(s"$basename#$i#$b$PayoffSuffix"),
+        for (b <- 0 until bucketCount) yield Source.fromFile(s"$basename#$i#$b$PayoffSuffix"),
       for (i <- 0 until shardCount) yield
-        for (b <- 0 until binCount) yield Source.fromFile(s"$basename#$i#$b$CostSuffix"),
+        for (b <- 0 until bucketCount) yield Source.fromFile(s"$basename#$i#$b$CostSuffix"),
       properties
     )
 

@@ -1,6 +1,6 @@
 package edu.nyu.tandon.search.selective
 
-import edu.nyu.tandon.search.selective.data.{Bin, QueryShardExperiment}
+import edu.nyu.tandon.search.selective.data.{Bucket, QueryShardExperiment}
 import edu.nyu.tandon.test.BaseFunSuite
 
 /**
@@ -13,55 +13,55 @@ class ShardSelectorTest extends BaseFunSuite {
     val selector = new ShardSelector(queryExperiment, 5)
   }
 
-  trait Bins {
-    val bins = List(
-      Bin(0, 9, 9),
-      Bin(1, 8, 8),
-      Bin(0, 5, 5),
-      Bin(1, 2, 2),
-      Bin(0, 1, 1)
+  trait Buckets {
+    val buckets = List(
+      Bucket(0, 9, 9),
+      Bucket(1, 8, 8),
+      Bucket(0, 5, 5),
+      Bucket(1, 2, 2),
+      Bucket(0, 1, 1)
     )
   }
 
-  test("binsWithinBudget") {
-    new Bins {
+  test("bucketsWithinBudget") {
+    new Buckets {
       // given
       val budget = 17.5
 
       // when
-      val bwb = ShardSelector.binsWithinBudget(bins, budget)
+      val bwb = ShardSelector.bucketsWithinBudget(buckets, budget)
 
       // then
-      assert(bwb == Seq(Bin(0, 9, 9), Bin(1, 8, 8)))
+      assert(bwb == Seq(Bucket(0, 9, 9), Bucket(1, 8, 8)))
     }
   }
 
-  test("binsWithinBudget: budget even with the sum of costs") {
-    new Bins {
+  test("bucketsWithinBudget: budget even with the sum of costs") {
+    new Buckets {
       // given
       val budget = 17
 
       // when
-      val bwb = ShardSelector.binsWithinBudget(bins, budget)
+      val bwb = ShardSelector.bucketsWithinBudget(buckets, budget)
 
       // then
-      assert(bwb == Seq(Bin(0, 9, 9), Bin(1, 8, 8)))
+      assert(bwb == Seq(Bucket(0, 9, 9), Bucket(1, 8, 8)))
     }
   }
 
   /*
-   * Still should return the first bin.
+   * Still should return the first bucket.
    */
-  test("binsWithinBudget: budget lower than the first cost") {
-    new Bins {
+  test("bucketsWithinBudget: budget lower than the first cost") {
+    new Buckets {
       // given
       val budget = 5
 
       // when
-      val bwb = ShardSelector.binsWithinBudget(bins, budget)
+      val bwb = ShardSelector.bucketsWithinBudget(buckets, budget)
 
       // then
-      assert(bwb == Seq(Bin(0, 9, 9)))
+      assert(bwb == Seq(Bucket(0, 9, 9)))
     }
   }
 

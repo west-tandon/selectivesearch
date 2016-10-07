@@ -13,14 +13,14 @@ package object results {
     new GroupedResults(for (s <- 0 until shardCount) yield FlatResults.fromBasename(s"$basename#$s"))
   }
 
-  def resultsByBinsFromBasename(basename: String): GroupedResults = {
-    val shardCount = loadProperties(basename).getProperty("bins.count").toInt
+  def resultsByBucketsFromBasename(basename: String): GroupedResults = {
+    val shardCount = loadProperties(basename).getProperty("buckets.count").toInt
     new GroupedResults(for (s <- 0 until shardCount) yield FlatResults.fromBasename(s"$basename#$s"))
   }
 
-  def resultsByShardsAndBinsFromBasename(basename: String): GroupedGroupedResults = {
+  def resultsByShardsAndBucketsFromBasename(basename: String): GroupedGroupedResults = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
-    new GroupedGroupedResults(for (s <- 0 until shardCount) yield resultsByBinsFromBasename(s"$basename#$s"))
+    new GroupedGroupedResults(for (s <- 0 until shardCount) yield resultsByBucketsFromBasename(s"$basename#$s"))
   }
 
 }

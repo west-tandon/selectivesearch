@@ -5,10 +5,10 @@ import scala.collection.mutable
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class ShardQueue(pq: mutable.PriorityQueue[List[Bin]])
-  extends mutable.AbstractIterable[Bin] {
+class ShardQueue(pq: mutable.PriorityQueue[List[Bucket]])
+  extends mutable.AbstractIterable[Bucket] {
 
-  def dequeue(): Bin = {
+  def dequeue(): Bucket = {
     pq.dequeue() match {
       case Nil =>
         throw new NoSuchElementException("no element to remove from the queue");
@@ -20,9 +20,9 @@ class ShardQueue(pq: mutable.PriorityQueue[List[Bin]])
     }
   }
 
-  override def iterator: Iterator[Bin] = new Iterator[Bin] {
+  override def iterator: Iterator[Bucket] = new Iterator[Bucket] {
     override def hasNext: Boolean = pq.nonEmpty
-    override def next(): Bin = dequeue()
+    override def next(): Bucket = dequeue()
   }
 
 }
@@ -30,8 +30,8 @@ class ShardQueue(pq: mutable.PriorityQueue[List[Bin]])
 object ShardQueue {
 
   def maxPayoffQueue(queryData: QueryData): ShardQueue = {
-    val queue = new mutable.PriorityQueue[List[Bin]]()(Ordering.by(_.head.payoff))
-    queryData.binsByShard
+    val queue = new mutable.PriorityQueue[List[Bucket]]()(Ordering.by(_.head.payoff))
+    queryData.bucketsByShard
       .filter(_.nonEmpty)
       .foreach(queue.enqueue(_))
     new ShardQueue(queue)

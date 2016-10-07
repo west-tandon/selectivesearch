@@ -18,7 +18,7 @@ class GroupedGroupedResultsTest extends BaseFunSuite {
 
   test("select") {
     new Selector {
-      for ((actual, expected) <- resultsByShardsAndBinsFromBasename(s"$resourcesPath/test").select(selector) zip Seq(
+      for ((actual, expected) <- resultsByShardsAndBucketsFromBasename(s"$resourcesPath/test").select(selector) zip Seq(
         Seq(21, 11, 22, 12, 23, 13, 124, 114, 125, 115, 126, 116, 217, 218),
         Seq(1, 2, 3, 104, 105, 106),
         Seq(21, 11, 1, 22, 12, 2, 23, 13, 3, 124, 114, 125, 115, 126, 116)
