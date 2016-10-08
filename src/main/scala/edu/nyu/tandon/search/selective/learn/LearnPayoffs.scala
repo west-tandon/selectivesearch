@@ -15,6 +15,8 @@ import scalax.io.Resource
   */
 object LearnPayoffs {
 
+  val CommandName = "learn-payoffs"
+
   val FeaturesColumn = "features"
   val LabelColumn = "label"
 
@@ -40,7 +42,7 @@ object LearnPayoffs {
 
     case class Config(basename: String = null)
 
-    val parser = new OptionParser[Config](this.getClass.getSimpleName) {
+    val parser = new OptionParser[Config](CommandName) {
 
       opt[String]('n', "basename")
         .action((x, c) => c.copy(basename = x))

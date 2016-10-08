@@ -9,6 +9,8 @@ import scopt.OptionParser
   */
 object BucketizeResults {
 
+  val CommandName = "bucketize"
+
   def parseBasename(basename: String): (String, Option[Int]) = {
     val s = basename.split(NestingIndicator)
     if (s.length == 1) (basename, None)
@@ -20,7 +22,7 @@ object BucketizeResults {
 
     case class Config(basename: String = null)
 
-    val parser = new OptionParser[Config](this.getClass.getSimpleName) {
+    val parser = new OptionParser[Config](CommandName) {
 
       opt[String]('n', "basename")
         .action((x, c) => c.copy(basename = x))

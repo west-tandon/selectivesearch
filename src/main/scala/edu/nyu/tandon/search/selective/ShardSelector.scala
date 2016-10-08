@@ -40,6 +40,8 @@ class ShardSelector(val queryShardExperiment: QueryShardExperiment,
 
 object ShardSelector {
 
+  val CommandName = "select-shards"
+
   /**
     * Choose the buckets within the budget
     */
@@ -82,7 +84,7 @@ object ShardSelector {
     case class Config(basename: String = null,
                       budget: Double = 0.0)
 
-    val parser = new OptionParser[Config](this.getClass.getSimpleName) {
+    val parser = new OptionParser[Config](CommandName) {
 
       opt[String]('i', "basename")
         .action((x, c) => c.copy(basename = x))

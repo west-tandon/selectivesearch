@@ -11,7 +11,7 @@ class TrecResults(val lines: Iterable[TrecLine]) extends Iterable[TrecLine] {
   override def iterator: Iterator[TrecLine] = lines.iterator
 
   /**
-    * Store Trec Results to a file ${basename}.trec
+    * Store Trec Results to a file [basename].trec
     * @param basename the basename to which store the file
     */
   def store(basename: String): Unit = saveAs(s"$basename$TrecSuffix")
