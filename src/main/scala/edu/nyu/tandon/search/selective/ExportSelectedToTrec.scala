@@ -8,12 +8,14 @@ import scopt.OptionParser
   */
 object ExportSelectedToTrec {
 
+  val CommandName = "export-trec"
+
   def main(args: Array[String]): Unit = {
 
     case class Config(basename: String = null,
                       model: String = null)
 
-    val parser = new OptionParser[Config](this.getClass.getSimpleName) {
+    val parser = new OptionParser[Config](CommandName) {
 
       opt[String]('n', "basename")
         .action((x, c) => c.copy(basename = x))
