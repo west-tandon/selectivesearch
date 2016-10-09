@@ -15,7 +15,7 @@ class FlatResults(val sequence: Iterable[ResultLine], val hasScores: Boolean) ex
   override def iterator: Iterator[ResultLine] = sequence.iterator
 
   def partition(partitionSize: Long, partitionCount: Int): GroupedResults = {
-    val x = this map (_.groupByBuckets(partitionSize, partitionCount))
+//    val m = this map (_.groupByBuckets(partitionSize, partitionCount))
     new GroupedResults(
       for (b <- 0 until partitionCount)
         yield {
@@ -25,17 +25,21 @@ class FlatResults(val sequence: Iterable[ResultLine], val hasScores: Boolean) ex
   }
 
   def store(basename: String): Unit = {
-    val (queries, documentIds, scores) = this.map(_.toStringTuple).unzip3
+    val ((queries, localDocumentIds), (globalDocumentIds, scores)): ((Iterable[String], Iterable[String]), (Iterable[String], Iterable[Option[String]])) = {
+      val mid = this.map(_.toStringTuple).unzip { case (a, b, c, d) => ((a, b), (c, d)) }
+      (mid._1.unzip, mid._2.unzip)
+    }
     storeQueries(basename, queries)
-    storeDocumentIds(basename, documentIds)
+    storeDocumentIds(basename, localDocumentIds, LocalSuffix)
+    storeDocumentIds(basename, globalDocumentIds, GlobalSuffix)
     if (hasScores) storeScores(basename, scores.map(_.get))
   }
   def storeQueries(basename: String, queries: Iterable[String]): Unit =
     storeStrings(s"${base(basename)}$QueriesSuffix", queries)
-  def storeDocumentIds(basename: String, documentIds: Iterable[String]): Unit =
-    storeStrings(s"$basename$ResultsSuffix", documentIds)
+  def storeDocumentIds(basename: String, documentIds: Iterable[String], suffix: String): Unit =
+    storeStrings(s"$basename$ResultsSuffix$suffix", documentIds)
   def storeScores(basename: String, scores: Iterable[String]): Unit =
-    storeStrings(s"$basename$ScoresSuffix", scores)
+    storeStrings(s"$basename$ResultsSuffix$ScoresSuffix", scores)
   def storeStrings(file: String, strings: Iterable[String]): Unit = {
     val writer = new FileWriter(file)
     for (s <- strings) writer.append(s"$s\n")
@@ -48,17 +52,19 @@ object FlatResults {
   def fromBasename(basename: String): FlatResults = {
     val b = base(basename)
     val queries = Source.fromFile(s"${base(basename)}$QueriesSuffix").getLines().toIterable
-    val documents = Source.fromFile(s"$basename$ResultsSuffix").getLines().toIterable
+    val localDocs = Source.fromFile(s"$basename$ResultsSuffix$LocalSuffix").getLines().toIterable
+    val globalDocs = Source.fromFile(s"$basename$ResultsSuffix$GlobalSuffix").getLines().toIterable
 
-    Files.exists(Paths.get(s"$basename$ScoresSuffix")) match {
+    Files.exists(Paths.get(s"$basename$ResultsSuffix$ScoresSuffix")) match {
       case true =>
-        val scores = Source.fromFile(s"$basename$ScoresSuffix").getLines().toIterable
-        new FlatResults((queries.toList, documents, scores).zipped.map {
-          case (q, d, s) => ResultLine.fromString(q, d, s)
+        val scores = Source.fromFile(s"$basename$ResultsSuffix$ScoresSuffix").getLines().toIterable
+        new FlatResults(((queries.toList zip localDocs) zip (globalDocs zip scores)).map {
+          case ((q, l), (g, s)) =>
+            ResultLine.fromString(query = q, localDocumentIds = l, globalDocumentIds = g, scores = s)
         }, true)
       case false =>
-        new FlatResults((queries, documents).zipped.map {
-          case (q, d) => ResultLine.fromString(q, d)
+        new FlatResults((queries, localDocs, globalDocs).zipped.map {
+          case (q, l, g) => ResultLine.fromString(query = q, localDocumentIds = l, globalDocumentIds = g)
         }, false)
     }
   }

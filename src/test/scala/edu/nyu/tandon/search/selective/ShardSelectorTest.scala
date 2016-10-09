@@ -80,7 +80,7 @@ class ShardSelectorTest extends BaseFunSuite {
 
   test("main: with scores") {
     // given
-    val tmpDir = createTemporaryCopyOfResources(regex = ".*results|.*scores|.*properties|.*queries|.*payoff|.*cost")
+    val tmpDir = createTemporaryCopyOfResources(regex = ".*results.*|.*scores|.*properties|.*queries|.*payoff|.*cost")
 
     // when
     ShardSelector.main(Array(
@@ -94,7 +94,7 @@ class ShardSelectorTest extends BaseFunSuite {
 
   test("main: without scores") {
     // given
-    val tmpDir = createTemporaryCopyOfResources(regex = ".*results|.*properties|.*queries|.*payoff|.*cost")
+    val tmpDir = createTemporaryCopyOfResources(regex = ".*results\\.global|.*results\\.local|.*properties|.*queries|.*payoff|.*cost")
 
     // when
     ShardSelector.main(Array(

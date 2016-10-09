@@ -48,11 +48,11 @@ object Payoffs {
   def fromResults(basename: String): Payoffs = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
     val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
-    val globalResults = lines(s"$basename$ResultsSuffix").map(lineToLongs(_).sorted)
+    val globalResults = lines(s"$basename$ResultsSuffix$GlobalSuffix").map(lineToLongs(_).sorted)
     new Payoffs(
       new ZippableSeq(for (s <- 0 until shardCount) yield
         new ZippableSeq(for (b <- 0 until bucketCount) yield {
-          val shardResultsSorted = lines(s"$basename#$s#$b$ResultsSuffix").map(lineToLongs(_).sorted)
+          val shardResultsSorted = lines(s"$basename#$s#$b$ResultsSuffix$GlobalSuffix").map(lineToLongs(_).sorted)
           val filteredShardResults = globalResults.zip(shardResultsSorted) map {
             case (global, shard) => shard.count(global.contains(_)).toDouble
           }
