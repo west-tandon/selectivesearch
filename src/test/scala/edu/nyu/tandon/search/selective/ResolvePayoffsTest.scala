@@ -9,7 +9,7 @@ class ResolvePayoffsTest extends BaseFunSuite {
 
   test("main") {
     // given
-    val tmpDir = createTemporaryCopyOfResources(regex = ".*results|.*properties")
+    val tmpDir = createTemporaryCopyOfResources(regex = ".*results.*|.*properties")
 
     // when
     ResolvePayoffs.main(Array("--basename", s"$tmpDir/test"))

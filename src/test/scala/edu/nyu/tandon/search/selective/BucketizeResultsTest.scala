@@ -16,28 +16,37 @@ class BucketizeResultsTest extends BaseFunSuite {
   trait FilesWithScores {
     val outputFileNames = Seq(
       Seq(
-        s"test#0#0$ResultsSuffix",
-        s"test#0#1$ResultsSuffix",
-        s"test#0#2$ResultsSuffix",
-        s"test#0#0$ScoresSuffix",
-        s"test#0#1$ScoresSuffix",
-        s"test#0#2$ScoresSuffix"
+        s"test#0#0$ResultsSuffix$LocalSuffix",
+        s"test#0#1$ResultsSuffix$LocalSuffix",
+        s"test#0#2$ResultsSuffix$LocalSuffix",
+        s"test#0#0$ResultsSuffix$GlobalSuffix",
+        s"test#0#1$ResultsSuffix$GlobalSuffix",
+        s"test#0#2$ResultsSuffix$GlobalSuffix",
+        s"test#0#0$ResultsSuffix$ScoresSuffix",
+        s"test#0#1$ResultsSuffix$ScoresSuffix",
+        s"test#0#2$ResultsSuffix$ScoresSuffix"
       ),
       Seq(
-        s"test#1#0$ResultsSuffix",
-        s"test#1#1$ResultsSuffix",
-        s"test#1#2$ResultsSuffix",
-        s"test#1#0$ScoresSuffix",
-        s"test#1#1$ScoresSuffix",
-        s"test#1#2$ScoresSuffix"
+        s"test#1#0$ResultsSuffix$LocalSuffix",
+        s"test#1#1$ResultsSuffix$LocalSuffix",
+        s"test#1#2$ResultsSuffix$LocalSuffix",
+        s"test#1#0$ResultsSuffix$GlobalSuffix",
+        s"test#1#1$ResultsSuffix$GlobalSuffix",
+        s"test#1#2$ResultsSuffix$GlobalSuffix",
+        s"test#1#0$ResultsSuffix$ScoresSuffix",
+        s"test#1#1$ResultsSuffix$ScoresSuffix",
+        s"test#1#2$ResultsSuffix$ScoresSuffix"
       ),
       Seq(
-        s"test#2#0$ResultsSuffix",
-        s"test#2#1$ResultsSuffix",
-        s"test#2#2$ResultsSuffix",
-        s"test#2#0$ScoresSuffix",
-        s"test#2#1$ScoresSuffix",
-        s"test#2#2$ScoresSuffix"
+        s"test#2#0$ResultsSuffix$LocalSuffix",
+        s"test#2#1$ResultsSuffix$LocalSuffix",
+        s"test#2#2$ResultsSuffix$LocalSuffix",
+        s"test#2#0$ResultsSuffix$GlobalSuffix",
+        s"test#2#1$ResultsSuffix$GlobalSuffix",
+        s"test#2#2$ResultsSuffix$GlobalSuffix",
+        s"test#2#0$ResultsSuffix$ScoresSuffix",
+        s"test#2#1$ResultsSuffix$ScoresSuffix",
+        s"test#2#2$ResultsSuffix$ScoresSuffix"
       )
     )
   }
@@ -45,19 +54,28 @@ class BucketizeResultsTest extends BaseFunSuite {
   trait FilesWithoutScores {
     val outputFileNames = Seq(
       Seq(
-        s"test#0#0$ResultsSuffix",
-        s"test#0#1$ResultsSuffix",
-        s"test#0#2$ResultsSuffix"
+        s"test#0#0$ResultsSuffix$LocalSuffix",
+        s"test#0#1$ResultsSuffix$LocalSuffix",
+        s"test#0#2$ResultsSuffix$LocalSuffix",
+        s"test#0#0$ResultsSuffix$GlobalSuffix",
+        s"test#0#1$ResultsSuffix$GlobalSuffix",
+        s"test#0#2$ResultsSuffix$GlobalSuffix"
       ),
       Seq(
-        s"test#1#0$ResultsSuffix",
-        s"test#1#1$ResultsSuffix",
-        s"test#1#2$ResultsSuffix"
+        s"test#1#0$ResultsSuffix$LocalSuffix",
+        s"test#1#1$ResultsSuffix$LocalSuffix",
+        s"test#1#2$ResultsSuffix$LocalSuffix",
+        s"test#1#0$ResultsSuffix$GlobalSuffix",
+        s"test#1#1$ResultsSuffix$GlobalSuffix",
+        s"test#1#2$ResultsSuffix$GlobalSuffix"
       ),
       Seq(
-        s"test#2#0$ResultsSuffix",
-        s"test#2#1$ResultsSuffix",
-        s"test#2#2$ResultsSuffix"
+        s"test#2#0$ResultsSuffix$LocalSuffix",
+        s"test#2#1$ResultsSuffix$LocalSuffix",
+        s"test#2#2$ResultsSuffix$LocalSuffix",
+        s"test#2#0$ResultsSuffix$GlobalSuffix",
+        s"test#2#1$ResultsSuffix$GlobalSuffix",
+        s"test#2#2$ResultsSuffix$GlobalSuffix"
       )
     )
   }
@@ -79,7 +97,7 @@ class BucketizeResultsTest extends BaseFunSuite {
   test("main: shard with scores") {
     new FilesWithScores {
       // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|test#.\\.scores|.*properties|.*queries")
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results.*|.*properties|.*queries")
 
       // when
       BucketizeResults.main(Array("--basename", s"$tmpDir/test#0"))
@@ -94,7 +112,7 @@ class BucketizeResultsTest extends BaseFunSuite {
   test("main: shard without scores") {
     new FilesWithoutScores {
       // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|.*properties|.*queries")
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results\\.global|test#.\\.results\\.local|.*properties|.*queries")
 
       // when
       BucketizeResults.main(Array("--basename", s"$tmpDir/test#0"))
@@ -107,7 +125,7 @@ class BucketizeResultsTest extends BaseFunSuite {
   test("main: all with scores") {
     new FilesWithScores {
       // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|test#.\\.scores|.*properties|.*queries")
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results.*|test#.\\.scores|.*properties|.*queries")
 
       // when
       BucketizeResults.main(Array("--basename", s"$tmpDir/test"))
@@ -120,7 +138,7 @@ class BucketizeResultsTest extends BaseFunSuite {
   test("main: all without scores") {
     new FilesWithoutScores {
       // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results|.*properties|.*queries")
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results\\.global|test#.\\.results\\.local|.*properties|.*queries")
 
       // when
       BucketizeResults.main(Array("--basename", s"$tmpDir/test"))

@@ -26,7 +26,10 @@ package object tandon {
 
   def lineToLongs(line: String): Seq[Long] = line.split(FieldSplitter).toSeq.map(_.toLong)
   def lineToDoubles(line: String): Seq[Double] = line.split(FieldSplitter).toSeq.map(_.toDouble)
-  def lines[T](file: String)(implicit converter: String => T): LongTraversable[T] =
-    Resource.fromFile(file).lines().map(converter)
+  def lines[T](file: String)(implicit converter: String => T): LongTraversable[T] = {
+    val lines = Resource.fromFile(file).lines()
+    require(lines.nonEmpty, s"the file $file is either empty or doesn't exist")
+    lines.map(converter)
+  }
 
 }

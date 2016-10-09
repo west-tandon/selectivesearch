@@ -3,6 +3,7 @@ package edu.nyu.tandon.search.selective.data.results.trec
 import edu.nyu.tandon.search.selective._
 
 import scalax.io.Resource
+import edu.nyu.tandon._
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -28,11 +29,10 @@ object TrecResults {
   val TrecSplitter = "\\s+"
 
   def fromSelected(basename: String): TrecResults = {
-    val x = Resource.fromFile(s"$basename$ResultsSuffix").lines()
-    val documentIds = Resource.fromFile(s"$basename$SelectedSuffix$ResultsSuffix").lines().map(_.split(FieldSplitter).map(_.toLong))
-    val scores = Resource.fromFile(s"$basename$SelectedSuffix$ScoresSuffix").lines().map(_.split(FieldSplitter).map(_.toDouble))
-    val titles = Resource.fromFile(s"$basename$TitlesSuffix").lines()
-    val trecIds = Resource.fromFile(s"$basename$TrecIdSuffix").lines().map(_.toInt)
+    val documentIds = lines(s"$basename$SelectedSuffix$DocumentsSuffix")(_.split(FieldSplitter).map(_.toLong))
+    val scores = lines(s"$basename$SelectedSuffix$ScoresSuffix")(_.split(FieldSplitter).map(_.toDouble))
+    val titles = lines(s"$basename$TitlesSuffix")
+    val trecIds = lines(s"$basename$TrecIdSuffix")(_.toInt)
 
     new TrecResults((for (
       ((qDocIds, qScores), qTrecId) <- documentIds.zip(scores).zip(trecIds);
