@@ -4,6 +4,7 @@ import java.io.FileWriter
 import java.nio.file.{Files, Paths}
 
 import edu.nyu.tandon.search.selective._
+import edu.nyu.tandon.{base => _, _}
 
 import scala.io.Source
 
@@ -14,15 +15,11 @@ class FlatResults(val sequence: Iterable[ResultLine], val hasScores: Boolean) ex
 
   override def iterator: Iterator[ResultLine] = sequence.iterator
 
-  def partition(partitionSize: Long, partitionCount: Int): GroupedResults = {
-//    val m = this map (_.groupByBuckets(partitionSize, partitionCount))
+  def bucketize(bucketSize: Long, bucketCount: Int): GroupedResults =
     new GroupedResults(
-      for (b <- 0 until partitionCount)
-        yield {
-          new FlatResults(this.map(_.groupByBuckets(partitionSize, partitionCount)(b)), hasScores)
-        }
+      for (b <- 0 until bucketCount) yield
+          new FlatResults(this.map(_.groupByBuckets(bucketSize, bucketCount)(b)), hasScores)
     )
-  }
 
   def store(basename: String): Unit = {
     val ((queries, localDocumentIds), (globalDocumentIds, scores)): ((Iterable[String], Iterable[String]), (Iterable[String], Iterable[Option[String]])) = {
