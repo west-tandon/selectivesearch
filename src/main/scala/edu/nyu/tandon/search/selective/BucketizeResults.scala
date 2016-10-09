@@ -38,17 +38,20 @@ object BucketizeResults {
 
         val properties = loadProperties(basename)
         val bucketCount = properties.getProperty("buckets.count").toInt
-        val maxId = properties.getProperty("maxId").toLong
+        val shardCount = properties.getProperty("shards.count").toInt
 
         shard match {
           case Some(shardId) =>
+            val bucketSize = math.ceil(properties.getProperty(s"maxId.$shardId").toDouble / bucketCount.toDouble).toLong
             FlatResults
               .fromBasename(config.basename)
-              .partition(math.ceil(maxId.toDouble / bucketCount.toDouble).toLong, bucketCount)
+              .bucketize(bucketSize, bucketCount)
               .store(config.basename)
-          case None          =>
+          case None =>
+            val bucketSizes = for (shardId <- 0 until shardCount) yield
+              math.ceil(properties.getProperty(s"maxId.$shardId").toDouble / bucketCount.toDouble).toLong
             resultsByShardsFromBasename(basename)
-              .partition(math.ceil(maxId.toDouble / bucketCount.toDouble).toLong, bucketCount)
+              .bucketize(bucketSizes)
               .store(basename)
         }
 

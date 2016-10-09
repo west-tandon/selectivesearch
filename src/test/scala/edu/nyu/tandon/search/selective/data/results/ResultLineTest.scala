@@ -16,10 +16,21 @@ class ResultLineTest extends BaseFunSuite {
     val results = ResultLine.fromString("q2", "1 2 3 4 5", "10 20 30 40 50")
   }
 
+  trait EmptyResults {
+    val results = ResultLine.fromString("q3", "", "")
+  }
+
+  test("fromString: empty scores") {
+    new EmptyResults {
+      results.query shouldBe "q3"
+    }
+  }
+
   test("fromString: with scores") {
     new ResultsWithScores {
       results.query shouldBe "q1"
       results.localDocumentIds should contain theSameElementsInOrderAs Seq(1, 2, 3, 4, 5)
+      results.globalDocumentIds should contain theSameElementsInOrderAs Seq(10, 20, 30, 40, 50)
       results.getScores should contain theSameElementsInOrderAs Seq(5.0, 4.0, 3.0, 2.0, 1.0)
     }
   }
@@ -28,6 +39,7 @@ class ResultLineTest extends BaseFunSuite {
     new ResultsWithoutScores {
       results.query shouldBe "q2"
       results.localDocumentIds should contain theSameElementsInOrderAs Seq(1, 2, 3, 4, 5)
+      results.globalDocumentIds should contain theSameElementsInOrderAs Seq(10, 20, 30, 40, 50)
       results.hasScores shouldBe false
     }
   }
@@ -70,7 +82,7 @@ class ResultLineTest extends BaseFunSuite {
 
   test("partition: with scores") {
     new ResultsWithScores {
-      val grouped = results.groupByBuckets(partitionSize = 2, partitionCount = 3)
+      val grouped = results.groupByBuckets(bucketSize = 2, bucketCount = 3)
       for (group <- grouped) group.query shouldBe results.query
       grouped.head.localDocumentIds should contain theSameElementsInOrderAs Seq(1)
       grouped.head.getScores should contain theSameElementsInOrderAs Seq(5.0)
@@ -83,7 +95,7 @@ class ResultLineTest extends BaseFunSuite {
 
   test("partition: without scores") {
     new ResultsWithoutScores {
-      val grouped = results.groupByBuckets(partitionSize = 2, partitionCount = 3)
+      val grouped = results.groupByBuckets(bucketSize = 2, bucketCount = 3)
       for (group <- grouped) group.query shouldBe results.query
       grouped.head.localDocumentIds should contain theSameElementsInOrderAs Seq(1)
       grouped.head.hasScores shouldBe false

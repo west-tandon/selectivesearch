@@ -1,6 +1,7 @@
 package edu.nyu.tandon.search.selective.data.results
 
 import edu.nyu.tandon.search.selective._
+import edu.nyu.tandon._
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -47,9 +48,9 @@ class ResultLine(val query: String,
 
   }
 
-  def groupByBuckets(partitionSize: Long, partitionCount: Int): Seq[ResultLine] = {
-    val m = this.groupBy(_.localDocumentId / partitionSize).mapValues(_.toSeq).withDefaultValue(Seq())
-    for (i <- 0 until partitionCount)
+  def groupByBuckets(bucketSize: Long, bucketCount: Int): Seq[ResultLine] = {
+    val m = this.groupBy(_.localDocumentId / bucketSize).mapValues(_.toSeq).withDefaultValue(Seq())
+    for (i <- 0 until bucketCount)
       yield new ResultLine(query,
         m(i).map(_.localDocumentId),
         m(i).map(_.globalDocumentId),
@@ -78,15 +79,15 @@ object ResultLine {
 
   def fromString(query: String, localDocumentIds: String, globalDocumentIds: String, scores: String): ResultLine = new ResultLine(
     query,
-    localDocumentIds.split(FieldSplitter).map(_.toLong),
-    globalDocumentIds.split(FieldSeparator).map(_.toLong),
-    Some(scores.split(FieldSplitter).map(_.toDouble))
+    lineToLongs(localDocumentIds),
+    lineToLongs(globalDocumentIds),
+    Some(lineToDoubles(scores))
   )
 
   def fromString(query: String, localDocumentIds: String, globalDocumentIds: String): ResultLine = new ResultLine(
     query,
-    localDocumentIds.split(FieldSplitter).map(_.toLong),
-    globalDocumentIds.split(FieldSeparator).map(_.toLong),
+    lineToLongs(localDocumentIds),
+    lineToLongs(globalDocumentIds),
     None
   )
 
