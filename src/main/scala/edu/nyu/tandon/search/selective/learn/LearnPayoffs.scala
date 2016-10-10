@@ -17,7 +17,7 @@ object LearnPayoffs {
 
   val CommandName = "learn-payoffs"
 
-  val spark = SparkSession.builder()
+  lazy val spark = SparkSession.builder()
     .master("local[*]")
     .appName(CommandName)
     .getOrCreate()
