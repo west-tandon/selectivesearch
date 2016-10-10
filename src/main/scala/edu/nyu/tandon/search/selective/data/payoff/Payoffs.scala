@@ -1,15 +1,18 @@
 package edu.nyu.tandon.search.selective.data.payoff
 
 import java.io.FileWriter
+import java.nio.file.{Files, Paths}
 
 import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.learn.LearnPayoffs.{BucketColumn, FeaturesColumn, QueryColumn, ShardColumn}
 import edu.nyu.tandon.search.selective.learn.PredictPayoffs.PredictedLabelColumn
 import edu.nyu.tandon.utils.ZippableSeq
+import org.apache.commons.io.FileUtils
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.RandomForestRegressionModel
-import org.apache.spark.sql.Row
+import org.apache.spark.sql.SaveMode.Overwrite
+import org.apache.spark.sql.{Row, SaveMode}
 
 import scala.language.implicitConversions
 import scalax.io.Resource
@@ -80,11 +83,15 @@ object Payoffs {
       .withColumnRenamed("_2", ShardColumn)
       .withColumnRenamed("_3", BucketColumn)
       .withColumnRenamed("_4", FeaturesColumn)
-    val prediction = model.transform(df)
 
-    new Payoffs(
-      (for (Row(queryId: Int) <- prediction.select(QueryColumn).distinct().collect()) yield {
-        val queryData = prediction.filter(prediction(QueryColumn) === queryId)
+    /* save predictions to temporary file */
+    val tmp = Files.createTempDirectory(PredictedLabelColumn)
+    model.transform(df).write.mode(Overwrite).save(tmp.toString)
+    val predictions = Spark.session.read.parquet(tmp.toString)
+
+    val payoffs =
+      (for (Row(queryId: Int) <- predictions.select(QueryColumn).distinct().collect()) yield {
+        val queryData = predictions.filter(predictions(QueryColumn) === queryId)
         (for (Row(shardId: Int) <- queryData.select(ShardColumn).distinct().collect()) yield {
           val shardData = queryData.filter(queryData(ShardColumn) === shardId)
           (for (Row(bucketId: Int) <- shardData.select(BucketColumn).distinct().collect()) yield {
@@ -100,7 +107,9 @@ object Payoffs {
           }).toSeq
         }).toSeq
       }).toIterable
-    )
+
+    FileUtils.deleteDirectory(tmp.toFile)
+    new Payoffs(payoffs)
 
   }
 

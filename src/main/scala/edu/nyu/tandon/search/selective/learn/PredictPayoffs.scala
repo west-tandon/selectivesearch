@@ -1,5 +1,6 @@
 package edu.nyu.tandon.search.selective.learn
 
+import edu.nyu.tandon.search.selective.Spark
 import edu.nyu.tandon.search.selective.data.payoff.Payoffs
 import org.apache.spark.ml.regression.RandomForestRegressionModel
 import scopt.OptionParser
@@ -35,6 +36,7 @@ object PredictPayoffs {
     parser.parse(args, Config()) match {
       case Some(config) =>
 
+        Spark.session
         val model = RandomForestRegressionModel.load(config.model)
         val payoffs = Payoffs.fromRegressionModel(config.basename, model)
         payoffs.store(config.basename)

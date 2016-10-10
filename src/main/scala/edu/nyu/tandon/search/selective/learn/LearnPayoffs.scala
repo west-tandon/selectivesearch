@@ -6,6 +6,7 @@ import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.RandomForestRegressor
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.SaveMode._
 import scopt.OptionParser
 
 import scalax.io.Resource
@@ -54,7 +55,7 @@ object LearnPayoffs {
     parser.parse(args, Config()) match {
       case Some(config) =>
 
-        trainingDataFromBasename(config.basename).write.save(s"${config.basename}.data")
+        trainingDataFromBasename(config.basename).write.mode(Overwrite).save(s"${config.basename}.data")
 
         val Array(trainingData, testData) = Spark.session
           .read.parquet(s"${config.basename}.data").randomSplit(Array(0.7, 0.3))
