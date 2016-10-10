@@ -17,8 +17,16 @@ object LearnPayoffs {
 
   val CommandName = "learn-payoffs"
 
+  val spark = SparkSession.builder()
+    .master("local[*]")
+    .appName(CommandName)
+    .getOrCreate()
+
   val FeaturesColumn = "features"
   val LabelColumn = "label"
+  val QueryColumn = "query"
+  val ShardColumn = "shard"
+  val BucketColumn = "bucket"
 
   def trainingDataFromBasename(basename: String): DataFrame = {
     val lengths = Resource.fromFile(s"$basename$QueryLengthsSuffix").lines().map(_.toDouble).toIterable
@@ -29,11 +37,7 @@ object LearnPayoffs {
          ((shardReddeScore, shardShrkcScore), shardPayoffs) <- reddeScores.zip(shrkcScores).zip(payoffs);
          (payoff, bucket) <- shardPayoffs.zipWithIndex)
       yield (Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble), payoff)
-    SparkSession.builder()
-      .master("local[*]")
-      .appName(LearnPayoffs.getClass.getName)
-      .getOrCreate()
-      .createDataFrame(data.toSeq)
+    spark.createDataFrame(data.toSeq)
       .withColumnRenamed("_1", FeaturesColumn)
       .withColumnRenamed("_2", LabelColumn)
   }
@@ -54,7 +58,10 @@ object LearnPayoffs {
     parser.parse(args, Config()) match {
       case Some(config) =>
 
-        val Array(trainingData, testData) = trainingDataFromBasename(config.basename).randomSplit(Array(0.7, 0.3))
+        trainingDataFromBasename(config.basename).write.save(s"${config.basename}.data")
+
+        val Array(trainingData, testData) = spark.read.parquet(s"${config.basename}.data").randomSplit(Array(0.7, 0.3))
+
         val regressor = new RandomForestRegressor()
         val model = regressor.fit(trainingData)
         model.write.overwrite().save(s"${config.basename}$ModelSuffix")

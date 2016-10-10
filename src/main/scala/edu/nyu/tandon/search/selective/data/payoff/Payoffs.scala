@@ -5,10 +5,12 @@ import java.io.FileWriter
 import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.learn.LearnPayoffs
+import edu.nyu.tandon.search.selective.learn.LearnPayoffs.{BucketColumn, FeaturesColumn, QueryColumn, ShardColumn}
+import edu.nyu.tandon.search.selective.learn.PredictPayoffs.PredictedLabelColumn
 import edu.nyu.tandon.utils.ZippableSeq
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.RandomForestRegressionModel
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Row, SparkSession}
 
 import scala.language.implicitConversions
 import scalax.io.Resource
@@ -69,22 +71,40 @@ object Payoffs {
     val redde = shardLevelValue(basename, ReDDESuffix, _.toDouble)
     val shrkc = shardLevelValue(basename, ShRkCSuffix, _.toDouble)
 
+    val data = for (((queryLength, queryId), (reddeScores, shrkcScores)) <- lengths.zipWithIndex zip (redde zip shrkc);
+                    ((shardReddeScore, shardShrkcScore), shardId) <- reddeScores.zip(shrkcScores).zipWithIndex;
+                    bucket <- 0 until bucketCount) yield
+      (queryId, shardId, bucket, Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble))
+
+    val spark = SparkSession.builder()
+      .master("local[*]")
+      .appName(LearnPayoffs.CommandName)
+      .getOrCreate()
+    val df = spark.createDataFrame(data.toSeq)
+      .withColumnRenamed("_1", QueryColumn)
+      .withColumnRenamed("_2", ShardColumn)
+      .withColumnRenamed("_3", BucketColumn)
+      .withColumnRenamed("_4", FeaturesColumn)
+    val prediction = model.transform(df)
+
     new Payoffs(
-      // For each query
-      for (((queryLength, reddeScores), shrkcScores) <- lengths.zip(redde).zip(shrkc)) yield
-        // For each shard
-        for ((shardReddeScore, shardShrkcScore) <- reddeScores zip shrkcScores) yield
-          // For each bucket
-          for (bucket <- 0 until bucketCount) yield {
-            val df = SparkSession.builder()
-              .master("local[*]")
-              .appName(Payoffs.getClass.getName)
-              .getOrCreate()
-              .createDataFrame(Seq((Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble), 0.0)))
-              .withColumnRenamed("_1", LearnPayoffs.FeaturesColumn)
-            val prediction = model.transform(df)
-            prediction.toLocalIterator().next().getAs[Double](LearnPayoffs.LabelColumn)
-        }
+      (for (Row(queryId: Int) <- prediction.select(QueryColumn).distinct().collect()) yield {
+        val queryData = prediction.filter(prediction(QueryColumn) === queryId)
+        (for (Row(shardId: Int) <- queryData.select(ShardColumn).distinct().collect()) yield {
+          val shardData = queryData.filter(queryData(ShardColumn) === shardId)
+          (for (Row(bucketId: Int) <- shardData.select(BucketColumn).distinct().collect()) yield {
+            val bucketData = shardData
+              .filter(shardData(BucketColumn) === bucketId)
+              .select(PredictedLabelColumn)
+              .collect()
+            require(bucketData.length == 1,
+              s"there should be one row for (query, shard, bucket) but there is ${bucketData.length}")
+            bucketData.head match {
+              case Row(payoff: Double) => payoff
+            }
+          }).toSeq
+        }).toSeq
+      }).toIterable
     )
 
   }

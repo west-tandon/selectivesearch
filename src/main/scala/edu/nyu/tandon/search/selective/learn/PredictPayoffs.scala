@@ -11,6 +11,8 @@ object PredictPayoffs {
 
   val CommandName = "predict-payoffs"
 
+  val PredictedLabelColumn = "prediction"
+
   def main(args: Array[String]): Unit = {
 
     case class Config(basename: String = null,
