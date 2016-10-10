@@ -9,7 +9,7 @@ import edu.nyu.tandon.search.selective.learn.LearnPayoffs.{BucketColumn, Feature
 import edu.nyu.tandon.search.selective.learn.PredictPayoffs.PredictedLabelColumn
 import edu.nyu.tandon.utils.ZippableSeq
 import org.apache.commons.io.FileUtils
-import org.apache.spark.ml.linalg.Vectors
+import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.regression.RandomForestRegressionModel
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SaveMode.Overwrite
@@ -68,6 +68,7 @@ object Payoffs {
   def fromRegressionModel(basename: String, model: RandomForestRegressionModel): Payoffs = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
     val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
+    val queryCount = queries(basename).size
 
     val lengths = queryLengths(basename)
     val redde = reddeScores(basename)
@@ -87,31 +88,25 @@ object Payoffs {
     /* save predictions to temporary file */
     val tmp = Files.createTempDirectory(PredictedLabelColumn)
     model.transform(df).write.mode(Overwrite).save(tmp.toString)
-    val predictions = Spark.session.read.parquet(tmp.toString)
-
-    val payoffs =
-      for (queryId <- 0 until queries(basename).size) yield {
-        for (shardId <- 0 until shardCount) yield {
-          for (bucketId <- 0 until bucketCount) yield {
-            val bucketData = predictions
-              .filter(
-                predictions(QueryColumn) === queryId &&
-                predictions(ShardColumn) === shardId &&
-                predictions(BucketColumn) === bucketId
-              )
-              .select(PredictedLabelColumn)
-              .collect()
-            require(bucketData.length == 1,
-              s"there should be one row for (query, shard, bucket) but there is ${bucketData.length}")
-            bucketData.head match {
-              case Row(payoff: Double) => payoff
-            }
-          }
-        }
-      }
-
+    val predictions = Spark.session.read.parquet(tmp.toString).sort(QueryColumn, ShardColumn, BucketColumn).collect()
     FileUtils.deleteDirectory(tmp.toFile)
-    new Payoffs(payoffs)
+
+    new Payoffs(
+      for (queryId <- 0 until queryCount) yield
+        for (shardId <- 0 until shardCount) yield
+          for (bucketId <- 0 until bucketCount) yield
+            predictions(
+              queryId * shardCount * bucketCount +
+              shardId * bucketCount +
+              bucketId
+            ) match {
+              case Row(q: Int, s: Int, b: Int, f: Vector, payoff: Double) =>
+                require(q == queryId, s"expected query ID $queryId, found $q")
+                require(s == shardId, s"expected query ID $shardId, found $s")
+                require(b == bucketId, s"expected query ID $bucketId, found $b")
+                payoff
+            }
+    )
 
   }
 
