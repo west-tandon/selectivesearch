@@ -34,12 +34,12 @@ object TrecResults {
     val titles = lines(s"$basename$TitlesSuffix")
     val trecIds = lines(s"$basename$TrecIdSuffix")(_.toInt)
 
-    new TrecResults((for (
-      ((qDocIds, qScores), qTrecId) <- documentIds.zip(scores).zip(trecIds);
-      ((docId, score), i) <- qDocIds.zip(qScores).zipWithIndex
-    ) yield
-        new TrecLine(qTrecId, "Q0", titles(docId), i, score)
-      ).toIterable)
+    new TrecResults(
+      (for (
+        ((qDocIds, qScores), qTrecId) <- documentIds.zip(scores).zip(trecIds);
+        ((docId, score), i) <- qDocIds.zip(qScores).zipWithIndex
+      ) yield new TrecLine(qTrecId, "Q0", titles(docId), i, score)).toIterable
+    )
   }
 
   def fromTrecFile(trecFile: String): TrecResults =
