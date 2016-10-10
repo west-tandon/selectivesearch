@@ -1,7 +1,7 @@
 package edu.nyu.tandon.search.selective.data.payoff
 
 import java.io.FileWriter
-import java.nio.file.{Files, Paths}
+import java.nio.file.Files
 
 import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
@@ -11,11 +11,10 @@ import edu.nyu.tandon.utils.ZippableSeq
 import org.apache.commons.io.FileUtils
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.RandomForestRegressionModel
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.SaveMode.Overwrite
-import org.apache.spark.sql.{Row, SaveMode}
 
 import scala.language.implicitConversions
-import scalax.io.Resource
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -67,11 +66,12 @@ object Payoffs {
   }
 
   def fromRegressionModel(basename: String, model: RandomForestRegressionModel): Payoffs = {
+    val shardCount = loadProperties(basename).getProperty("shards.count").toInt
     val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
 
-    val lengths = Resource.fromFile(s"$basename$QueryLengthsSuffix").lines().map(_.toDouble).toIterable
-    val redde = shardLevelValue(basename, ReDDESuffix, _.toDouble)
-    val shrkc = shardLevelValue(basename, ShRkCSuffix, _.toDouble)
+    val lengths = queryLengths(basename)
+    val redde = reddeScores(basename)
+    val shrkc = shrkcScores(basename)
 
     val data = for (((queryLength, queryId), (reddeScores, shrkcScores)) <- lengths.zipWithIndex zip (redde zip shrkc);
                     ((shardReddeScore, shardShrkcScore), shardId) <- reddeScores.zip(shrkcScores).zipWithIndex;
@@ -90,13 +90,15 @@ object Payoffs {
     val predictions = Spark.session.read.parquet(tmp.toString)
 
     val payoffs =
-      (for (Row(queryId: Int) <- predictions.select(QueryColumn).distinct().collect()) yield {
-        val queryData = predictions.filter(predictions(QueryColumn) === queryId)
-        (for (Row(shardId: Int) <- queryData.select(ShardColumn).distinct().collect()) yield {
-          val shardData = queryData.filter(queryData(ShardColumn) === shardId)
-          (for (Row(bucketId: Int) <- shardData.select(BucketColumn).distinct().collect()) yield {
-            val bucketData = shardData
-              .filter(shardData(BucketColumn) === bucketId)
+      for (queryId <- 0 until queries(basename).size) yield {
+        for (shardId <- 0 until shardCount) yield {
+          for (bucketId <- 0 until bucketCount) yield {
+            val bucketData = predictions
+              .filter(
+                predictions(QueryColumn) === queryId &&
+                predictions(ShardColumn) === shardId &&
+                predictions(BucketColumn) === bucketId
+              )
               .select(PredictedLabelColumn)
               .collect()
             require(bucketData.length == 1,
@@ -104,9 +106,9 @@ object Payoffs {
             bucketData.head match {
               case Row(payoff: Double) => payoff
             }
-          }).toSeq
-        }).toSeq
-      }).toIterable
+          }
+        }
+      }
 
     FileUtils.deleteDirectory(tmp.toFile)
     new Payoffs(payoffs)

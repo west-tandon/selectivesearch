@@ -2,8 +2,8 @@ package edu.nyu.tandon.search
 
 import edu.nyu.tandon._
 import edu.nyu.tandon.utils.ZippableSeq
-import scala.language.implicitConversions
 
+import scala.language.implicitConversions
 import scalax.io.Resource
 
 /**
@@ -39,6 +39,10 @@ package object selective {
 
   def base(nestedBasename: String): String = nestedBasename.takeWhile(c => s"$c" != NestingIndicator)
 
+  def queryLevelValue[T](basename: String, suffix: String, converter: String => T): Iterable[T] = {
+    Resource.fromFile(s"$basename$suffix").lines().map(converter).toIterable
+  }
+
   def shardLevelSequence[T](basename: String, suffix: String, converter: String => T): Iterable[Seq[Seq[T]]] = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
     new ZippableSeq(
@@ -68,5 +72,12 @@ package object selective {
         ).zipped
     ).zipped
   }
+
+  /* Specific Functions */
+
+  def queryLengths(basename: String): Iterable[Int] = queryLevelValue(basename, QueryLengthsSuffix, _.toInt)
+  def queries(basename: String): Iterable[Int] = queryLevelValue(basename, QueryLengthsSuffix, _.toInt)
+  def reddeScores(basename: String): Iterable[Seq[Double]] = shardLevelValue(basename, ReDDESuffix, _.toDouble)
+  def shrkcScores(basename: String): Iterable[Seq[Double]] = shardLevelValue(basename, ReDDESuffix, _.toDouble)
 
 }
