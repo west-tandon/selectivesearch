@@ -4,13 +4,12 @@ import java.io.FileWriter
 
 import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
-import edu.nyu.tandon.search.selective.learn.LearnPayoffs
 import edu.nyu.tandon.search.selective.learn.LearnPayoffs.{BucketColumn, FeaturesColumn, QueryColumn, ShardColumn}
 import edu.nyu.tandon.search.selective.learn.PredictPayoffs.PredictedLabelColumn
 import edu.nyu.tandon.utils.ZippableSeq
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.RandomForestRegressionModel
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.Row
 
 import scala.language.implicitConversions
 import scalax.io.Resource
@@ -76,11 +75,7 @@ object Payoffs {
                     bucket <- 0 until bucketCount) yield
       (queryId, shardId, bucket, Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble))
 
-    val spark = SparkSession.builder()
-      .master("local[*]")
-      .appName(LearnPayoffs.CommandName)
-      .getOrCreate()
-    val df = spark.createDataFrame(data.toSeq)
+    val df = Spark.session.createDataFrame(data.toSeq)
       .withColumnRenamed("_1", QueryColumn)
       .withColumnRenamed("_2", ShardColumn)
       .withColumnRenamed("_3", BucketColumn)

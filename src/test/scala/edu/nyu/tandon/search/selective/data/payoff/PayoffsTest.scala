@@ -53,10 +53,6 @@ class PayoffsTest extends BaseFunSuite {
 
   test("fromRegressionModel") {
     new ExpectedPayoffs {
-      SparkSession.builder()
-        .master("local[*]")
-        .appName(LearnPayoffs.CommandName)
-        .getOrCreate()
       val actual = Payoffs.fromRegressionModel(s"$resourcesPath/test",
         RandomForestRegressionModel.load(s"$resourcesPath/test.model"))
       actual.toSeq.length shouldBe 2

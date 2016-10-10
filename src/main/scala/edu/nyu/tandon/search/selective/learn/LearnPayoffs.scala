@@ -5,7 +5,7 @@ import edu.nyu.tandon.search.selective.data.payoff.Payoffs
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.RandomForestRegressor
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.DataFrame
 import scopt.OptionParser
 
 import scalax.io.Resource
@@ -16,11 +16,6 @@ import scalax.io.Resource
 object LearnPayoffs {
 
   val CommandName = "learn-payoffs"
-
-  lazy val spark = SparkSession.builder()
-    .master("local[*]")
-    .appName(CommandName)
-    .getOrCreate()
 
   val FeaturesColumn = "features"
   val LabelColumn = "label"
@@ -37,7 +32,8 @@ object LearnPayoffs {
          ((shardReddeScore, shardShrkcScore), shardPayoffs) <- reddeScores.zip(shrkcScores).zip(payoffs);
          (payoff, bucket) <- shardPayoffs.zipWithIndex)
       yield (Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble), payoff)
-    spark.createDataFrame(data.toSeq)
+    Spark.session
+      .createDataFrame(data.toSeq)
       .withColumnRenamed("_1", FeaturesColumn)
       .withColumnRenamed("_2", LabelColumn)
   }
@@ -60,7 +56,8 @@ object LearnPayoffs {
 
         trainingDataFromBasename(config.basename).write.save(s"${config.basename}.data")
 
-        val Array(trainingData, testData) = spark.read.parquet(s"${config.basename}.data").randomSplit(Array(0.7, 0.3))
+        val Array(trainingData, testData) = Spark.session
+          .read.parquet(s"${config.basename}.data").randomSplit(Array(0.7, 0.3))
 
         val regressor = new RandomForestRegressor()
         val model = regressor.fit(trainingData)

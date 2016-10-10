@@ -4,6 +4,8 @@ import java.io.FileInputStream
 import java.util.Properties
 
 import edu.nyu.tandon.search.selective._
+import edu.nyu.tandon.search.selective.learn.LearnPayoffs
+import org.apache.spark.sql.SparkSession
 
 import scalax.io.{LongTraversable, Resource}
 
