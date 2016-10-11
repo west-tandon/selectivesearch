@@ -5,7 +5,8 @@ import edu.nyu.tandon.search.selective.data.payoff.Payoffs
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.RandomForestRegressor
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.SaveMode._
 import scopt.OptionParser
 
 import scalax.io.Resource
@@ -19,6 +20,9 @@ object LearnPayoffs {
 
   val FeaturesColumn = "features"
   val LabelColumn = "label"
+  val QueryColumn = "query"
+  val ShardColumn = "shard"
+  val BucketColumn = "bucket"
 
   def trainingDataFromBasename(basename: String): DataFrame = {
     val lengths = Resource.fromFile(s"$basename$QueryLengthsSuffix").lines().map(_.toDouble).toIterable
@@ -29,10 +33,7 @@ object LearnPayoffs {
          ((shardReddeScore, shardShrkcScore), shardPayoffs) <- reddeScores.zip(shrkcScores).zip(payoffs);
          (payoff, bucket) <- shardPayoffs.zipWithIndex)
       yield (Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble), payoff)
-    SparkSession.builder()
-      .master("local[*]")
-      .appName(LearnPayoffs.getClass.getName)
-      .getOrCreate()
+    Spark.session
       .createDataFrame(data.toSeq)
       .withColumnRenamed("_1", FeaturesColumn)
       .withColumnRenamed("_2", LabelColumn)
@@ -54,7 +55,11 @@ object LearnPayoffs {
     parser.parse(args, Config()) match {
       case Some(config) =>
 
-        val Array(trainingData, testData) = trainingDataFromBasename(config.basename).randomSplit(Array(0.7, 0.3))
+        trainingDataFromBasename(config.basename).write.mode(Overwrite).save(s"${config.basename}.data")
+
+        val Array(trainingData, testData) = Spark.session
+          .read.parquet(s"${config.basename}.data").randomSplit(Array(0.7, 0.3))
+
         val regressor = new RandomForestRegressor()
         val model = regressor.fit(trainingData)
         model.write.overwrite().save(s"${config.basename}$ModelSuffix")

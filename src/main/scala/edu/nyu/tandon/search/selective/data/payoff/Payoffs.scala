@@ -1,17 +1,20 @@
 package edu.nyu.tandon.search.selective.data.payoff
 
 import java.io.FileWriter
+import java.nio.file.Files
 
 import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
-import edu.nyu.tandon.search.selective.learn.LearnPayoffs
+import edu.nyu.tandon.search.selective.learn.LearnPayoffs.{BucketColumn, FeaturesColumn, QueryColumn, ShardColumn}
+import edu.nyu.tandon.search.selective.learn.PredictPayoffs.PredictedLabelColumn
 import edu.nyu.tandon.utils.ZippableSeq
-import org.apache.spark.ml.linalg.Vectors
+import org.apache.commons.io.FileUtils
+import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.regression.RandomForestRegressionModel
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.SaveMode.Overwrite
 
 import scala.language.implicitConversions
-import scalax.io.Resource
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -63,28 +66,46 @@ object Payoffs {
   }
 
   def fromRegressionModel(basename: String, model: RandomForestRegressionModel): Payoffs = {
+    val shardCount = loadProperties(basename).getProperty("shards.count").toInt
     val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
+    val queryCount = queries(basename).size
 
-    val lengths = Resource.fromFile(s"$basename$QueryLengthsSuffix").lines().map(_.toDouble).toIterable
-    val redde = shardLevelValue(basename, ReDDESuffix, _.toDouble)
-    val shrkc = shardLevelValue(basename, ShRkCSuffix, _.toDouble)
+    val lengths = queryLengths(basename)
+    val redde = reddeScores(basename)
+    val shrkc = shrkcScores(basename)
+
+    val data = for (((queryLength, queryId), (reddeScores, shrkcScores)) <- lengths.zipWithIndex zip (redde zip shrkc);
+                    ((shardReddeScore, shardShrkcScore), shardId) <- reddeScores.zip(shrkcScores).zipWithIndex;
+                    bucket <- 0 until bucketCount) yield
+      (queryId, shardId, bucket, Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble))
+
+    val df = Spark.session.createDataFrame(data.toSeq)
+      .withColumnRenamed("_1", QueryColumn)
+      .withColumnRenamed("_2", ShardColumn)
+      .withColumnRenamed("_3", BucketColumn)
+      .withColumnRenamed("_4", FeaturesColumn)
+
+    /* save predictions to temporary file */
+    val tmp = Files.createTempDirectory(PredictedLabelColumn)
+    model.transform(df).write.mode(Overwrite).save(tmp.toString)
+    val predictions = Spark.session.read.parquet(tmp.toString).sort(QueryColumn, ShardColumn, BucketColumn).collect()
+    FileUtils.deleteDirectory(tmp.toFile)
 
     new Payoffs(
-      // For each query
-      for (((queryLength, reddeScores), shrkcScores) <- lengths.zip(redde).zip(shrkc)) yield
-        // For each shard
-        for ((shardReddeScore, shardShrkcScore) <- reddeScores zip shrkcScores) yield
-          // For each bucket
-          for (bucket <- 0 until bucketCount) yield {
-            val df = SparkSession.builder()
-              .master("local[*]")
-              .appName(Payoffs.getClass.getName)
-              .getOrCreate()
-              .createDataFrame(Seq((Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble), 0.0)))
-              .withColumnRenamed("_1", LearnPayoffs.FeaturesColumn)
-            val prediction = model.transform(df)
-            prediction.toLocalIterator().next().getAs[Double](LearnPayoffs.LabelColumn)
-        }
+      for (queryId <- 0 until queryCount) yield
+        for (shardId <- 0 until shardCount) yield
+          for (bucketId <- 0 until bucketCount) yield
+            predictions(
+              queryId * shardCount * bucketCount +
+              shardId * bucketCount +
+              bucketId
+            ) match {
+              case Row(q: Int, s: Int, b: Int, f: Vector, payoff: Double) =>
+                require(q == queryId, s"expected query ID $queryId, found $q")
+                require(s == shardId, s"expected query ID $shardId, found $s")
+                require(b == bucketId, s"expected query ID $bucketId, found $b")
+                payoff
+            }
     )
 
   }

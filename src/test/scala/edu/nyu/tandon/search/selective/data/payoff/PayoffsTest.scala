@@ -1,6 +1,8 @@
 package edu.nyu.tandon.search.selective.data.payoff
 
+import edu.nyu.tandon.search.selective.Spark
 import edu.nyu.tandon.test.BaseFunSuite
+import org.apache.spark.ml.regression.RandomForestRegressionModel
 import org.scalatest.Matchers._
 
 /**
@@ -45,6 +47,20 @@ class PayoffsTest extends BaseFunSuite {
       for ((sa, se) <- actual.zipAll(expected, Seq(), Seq()))
         for ((a, e) <- sa.zipAll(se, Seq(), Seq()))
           a should contain theSameElementsAs e
+    }
+  }
+
+  test("fromRegressionModel") {
+    new ExpectedPayoffs {
+      Spark.session
+      val actual = Payoffs.fromRegressionModel(s"$resourcesPath/test",
+        RandomForestRegressionModel.load(s"$resourcesPath/test.model"))
+      actual.toSeq.length shouldBe 2
+      for (sa <- actual) {
+        sa.length shouldBe 3
+        for (a <- actual)
+          a.length shouldBe 3
+      }
     }
   }
 
