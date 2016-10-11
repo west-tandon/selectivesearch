@@ -30,7 +30,7 @@ class Payoffs(val payoffs: Iterable[Seq[Seq[Double]]]) extends Iterable[Seq[Seq[
     val writers =
       for (s <- 0 until shardCount) yield
         for (b <- 0 until bucketCount) yield
-          new FileWriter(s"$basename#$s#$b$PayoffSuffix")
+          new FileWriter(Path.toPayoffs(basename, s, b))
 
     for (queryPayoffs <- payoffs;
         (shardPayoffs, shardWriters) <- queryPayoffs zip writers;
@@ -46,20 +46,20 @@ object Payoffs {
 
   implicit def doubleSeqSeqIterable2Payoffs(payoffs: Iterable[Seq[Seq[Double]]]): Payoffs = new Payoffs(payoffs)
 
-  def fromPayoffs(basename: String): Payoffs = bucketLevelValue(basename, PayoffSuffix, _.toDouble)
+  def fromPayoffs(basename: String): Payoffs = Load.payoffsAt(basename)
 
   def fromResults(basename: String): Payoffs = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
     val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
-    val globalResults = lines(s"$basename$ResultsSuffix$GlobalSuffix").map(lineToLongs(_).sorted)
+    val globalResults = Load.globalResultDocumentsAt(basename)
     new Payoffs(
       new ZippableSeq(for (s <- 0 until shardCount) yield
         new ZippableSeq(for (b <- 0 until bucketCount) yield {
-          val shardResultsSorted = lines(s"$basename#$s#$b$ResultsSuffix$GlobalSuffix").map(lineToLongs(_).sorted)
+          val shardResultsSorted = lines(Path.toGlobalResults(basename, s, b)).map(lineToLongs(_).sorted).toIterable
           val filteredShardResults = globalResults.zip(shardResultsSorted) map {
             case (global, shard) => shard.count(global.contains(_)).toDouble
           }
-          filteredShardResults.toIterable
+          filteredShardResults
         }).zipped
       ).zipped
     )
@@ -68,11 +68,11 @@ object Payoffs {
   def fromRegressionModel(basename: String, model: RandomForestRegressionModel): Payoffs = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
     val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
-    val queryCount = queries(basename).size
+    val queryCount = Load.queriesAt(basename).size
 
-    val lengths = queryLengths(basename)
-    val redde = reddeScores(basename)
-    val shrkc = shrkcScores(basename)
+    val lengths = Load.queryLengthsAt(basename)
+    val redde = Load.reddeScoresAt(basename)
+    val shrkc = Load.shrkcScoresAt(basename)
 
     val data = for (((queryLength, queryId), (reddeScores, shrkcScores)) <- lengths.zipWithIndex zip (redde zip shrkc);
                     ((shardReddeScore, shardShrkcScore), shardId) <- reddeScores.zip(shrkcScores).zipWithIndex;

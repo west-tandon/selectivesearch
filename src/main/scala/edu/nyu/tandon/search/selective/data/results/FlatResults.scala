@@ -26,17 +26,12 @@ class FlatResults(val sequence: Iterable[ResultLine], val hasScores: Boolean) ex
       val mid = this.map(_.toStringTuple).unzip { case (a, b, c, d) => ((a, b), (c, d)) }
       (mid._1.unzip, mid._2.unzip)
     }
-    storeQueries(basename, queries)
-    storeDocumentIds(basename, localDocumentIds, LocalSuffix)
-    storeDocumentIds(basename, globalDocumentIds, GlobalSuffix)
-    if (hasScores) storeScores(basename, scores.map(_.get))
+    storeStrings(Path.toQueries(basename), queries)
+    storeStrings(Path.toLocalResults(basename), localDocumentIds)
+    storeStrings(Path.toGlobalResults(basename), globalDocumentIds)
+    if (hasScores) storeStrings(Path.toScores(basename), scores.map(_.get))
   }
-  def storeQueries(basename: String, queries: Iterable[String]): Unit =
-    storeStrings(s"${base(basename)}$QueriesSuffix", queries)
-  def storeDocumentIds(basename: String, documentIds: Iterable[String], suffix: String): Unit =
-    storeStrings(s"$basename$ResultsSuffix$suffix", documentIds)
-  def storeScores(basename: String, scores: Iterable[String]): Unit =
-    storeStrings(s"$basename$ResultsSuffix$ScoresSuffix", scores)
+
   def storeStrings(file: String, strings: Iterable[String]): Unit = {
     val writer = new FileWriter(file)
     for (s <- strings) writer.append(s"$s\n")
@@ -47,14 +42,13 @@ class FlatResults(val sequence: Iterable[ResultLine], val hasScores: Boolean) ex
 object FlatResults {
 
   def fromBasename(basename: String): FlatResults = {
-    val b = base(basename)
-    val queries = Source.fromFile(s"${base(basename)}$QueriesSuffix").getLines().toIterable
-    val localDocs = Source.fromFile(s"$basename$ResultsSuffix$LocalSuffix").getLines().toIterable
-    val globalDocs = Source.fromFile(s"$basename$ResultsSuffix$GlobalSuffix").getLines().toIterable
+    val queries = Load.queriesAt(base(basename))
+    val localDocs = lines(Path.toLocalResults(basename))
+    val globalDocs = lines(Path.toGlobalResults(basename))
 
-    Files.exists(Paths.get(s"$basename$ResultsSuffix$ScoresSuffix")) match {
+    Files.exists(Paths.get(Path.toScores(basename))) match {
       case true =>
-        val scores = Source.fromFile(s"$basename$ResultsSuffix$ScoresSuffix").getLines().toIterable
+        val scores = Source.fromFile(Path.toScores(basename)).getLines().toIterable
         new FlatResults(((queries.toList zip localDocs) zip (globalDocs zip scores)).map {
           case ((q, l), (g, s)) =>
             ResultLine.fromString(query = q, localDocumentIds = l, globalDocumentIds = g, scores = s)

@@ -53,7 +53,7 @@ object ShardSelector {
   }
 
   def writeSelection(basename: String, selection: Iterable[Seq[Int]]): Unit = {
-    val writer = new BufferedWriter(new FileWriter(s"$basename$SelectionSuffix"))
+    val writer = new BufferedWriter(new FileWriter(Path.toSelection(basename)))
     for (q <- selection) {
       writer.append(q.mkString(FieldSeparator))
       writer.newLine()
@@ -62,7 +62,7 @@ object ShardSelector {
   }
 
   def writeSelected(basename: String, selected: Iterable[Seq[Result]]): Unit = {
-    val documentsWriter = new BufferedWriter(new FileWriter(s"$basename$SelectedSuffix$DocumentsSuffix"))
+    val documentsWriter = new BufferedWriter(new FileWriter(Path.toSelectedDocuments(basename)))
     for (q <- selected) {
       documentsWriter.append(q.map(_.globalDocumentId).mkString(FieldSeparator))
       documentsWriter.newLine()
@@ -71,7 +71,7 @@ object ShardSelector {
   }
 
   def writeSelectedScores(basename: String, selected: Iterable[Seq[Result]]): Unit = {
-    val scoresWriter = new BufferedWriter(new FileWriter(s"$basename$SelectedSuffix$ScoresSuffix"))
+    val scoresWriter = new BufferedWriter(new FileWriter(Path.toSelectedScores(basename)))
     for (q <- selected) {
       scoresWriter.append(q.map(_.scoreValue).mkString(FieldSeparator))
       scoresWriter.newLine()

@@ -15,7 +15,7 @@ class TrecResults(val lines: Iterable[TrecLine]) extends Iterable[TrecLine] {
     * Store Trec Results to a file [basename].trec
     * @param basename the basename to which store the file
     */
-  def store(basename: String): Unit = saveAs(s"$basename$TrecSuffix")
+  def store(basename: String): Unit = saveAs(Path.toTrec(basename))
 
   /**
     * Save Trec Results in a file.
@@ -29,16 +29,16 @@ object TrecResults {
   val TrecSplitter = "\\s+"
 
   def fromSelected(basename: String): TrecResults = {
-    val documentIds = lines(s"$basename$SelectedSuffix$DocumentsSuffix")(_.split(FieldSplitter).map(_.toLong))
-    val scores = lines(s"$basename$SelectedSuffix$ScoresSuffix")(_.split(FieldSplitter).map(_.toDouble))
-    val titles = lines(s"$basename$TitlesSuffix")
-    val trecIds = lines(s"$basename$TrecIdSuffix")(_.toInt)
+    val documentIds = Load.selectedDocumentsAt(basename)
+    val scores = Load.selectedScoresAt(basename)
+    val titles = Load.titlesAt(basename).toIndexedSeq
+    val trecIds = Load.trecIdsAt(basename)
 
     new TrecResults(
       (for (
         ((qDocIds, qScores), qTrecId) <- documentIds.zip(scores).zip(trecIds);
         ((docId, score), i) <- qDocIds.zip(qScores).zipWithIndex
-      ) yield new TrecLine(qTrecId, "Q0", titles(docId), i, score)).toIterable
+      ) yield new TrecLine(qTrecId, "Q0", titles(docId.toInt), i, score)).toIterable
     )
   }
 

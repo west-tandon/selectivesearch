@@ -70,11 +70,11 @@ object QueryShardExperiment {
     val bucketCount = properties.getProperty("buckets.count").toInt
 
     new QueryShardExperiment(
-      Source.fromFile(s"$basename$QueriesSuffix"),
-      for (i <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield Source.fromFile(s"$basename#$i#$b$PayoffSuffix"),
-      for (i <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield Source.fromFile(s"$basename#$i#$b$CostSuffix"),
+      Source.fromFile(Path.toQueries(basename)),
+      for (s <- 0 until shardCount) yield
+        for (b <- 0 until bucketCount) yield Source.fromFile(Path.toPayoffs(basename, s, b)),
+      for (s <- 0 until shardCount) yield
+        for (b <- 0 until bucketCount) yield Source.fromFile(Path.toCosts(basename, s, b)),
       properties
     )
 
