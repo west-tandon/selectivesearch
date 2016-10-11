@@ -3,10 +3,9 @@ package edu.nyu.tandon.search.selective
 import java.nio.file.{Files, Paths}
 
 import edu.nyu.tandon.search.selective.BucketizeResults._
+import edu.nyu.tandon.search.selective.Path._
 import edu.nyu.tandon.test.BaseFunSuite
 import org.scalatest.Matchers._
-
-import scala.io.Source
 
 /**
   * @author michal.siedlaczek@nyu.edu

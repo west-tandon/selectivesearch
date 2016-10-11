@@ -25,9 +25,9 @@ object LearnPayoffs {
   val BucketColumn = "bucket"
 
   def trainingDataFromBasename(basename: String): DataFrame = {
-    val lengths = Resource.fromFile(s"$basename$QueryLengthsSuffix").lines().map(_.toDouble).toIterable
-    val redde = shardLevelValue(basename, ReDDESuffix, _.toDouble)
-    val shrkc = shardLevelValue(basename, ShRkCSuffix, _.toDouble)
+    val lengths = Load.queryLengthsAt(basename)
+    val redde = Load.reddeScoresAt(basename)
+    val shrkc = Load.shrkcScoresAt(basename)
     val labels = Payoffs.fromPayoffs(basename)
     val data = for ((((queryLength, reddeScores), shrkcScores), payoffs) <- lengths.zip(redde).zip(shrkc).zip(labels);
          ((shardReddeScore, shardShrkcScore), shardPayoffs) <- reddeScores.zip(shrkcScores).zip(payoffs);
@@ -62,10 +62,10 @@ object LearnPayoffs {
 
         val regressor = new RandomForestRegressor()
         val model = regressor.fit(trainingData)
-        model.write.overwrite().save(s"${config.basename}$ModelSuffix")
+        model.write.overwrite().save(Path.toModel(config.basename))
         val testPredictions = model.transform(testData)
         val eval = new RegressionEvaluator().evaluate(testPredictions)
-        Resource.fromFile(s"${config.basename}$ModelSuffix$EvalSuffix").write(s"$eval")
+        Resource.fromFile(Path.toModelEval(config.basename)).write(s"$eval")
 
       case None =>
     }
