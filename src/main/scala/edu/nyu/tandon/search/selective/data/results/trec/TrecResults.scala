@@ -5,6 +5,7 @@ import java.io.FileWriter
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
+import edu.nyu.tandon.search.selective.base
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -39,11 +40,11 @@ object TrecResults extends LazyLogging {
   val TrecSeparator = "\t"
   val TrecSplitter = "\\s+"
 
-  def fromSelected(basename: String): TrecResults = {
-    val documentIds = Load.selectedDocumentsAt(basename)
-    val scores = Load.selectedScoresAt(basename)
-    val titles = Load.titlesAt(basename).toIndexedSeq
-    val trecIds = Load.trecIdsAt(basename)
+  def fromSelected(basename: String, input: String): TrecResults = {
+    val documentIds = Load.selectedDocumentsAt(input)
+    val scores = Load.selectedScoresAt(input)
+    val titles = Load.titlesAt(base(basename)).toIndexedSeq
+    val trecIds = Load.trecIdsAt(base(basename))
 
     new TrecResults(
       (for (((qDocIds, qScores), (qTrecId, i)) <- documentIds.zip(scores).zip(trecIds.zipWithIndex)) yield {

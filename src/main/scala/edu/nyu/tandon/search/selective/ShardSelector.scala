@@ -104,12 +104,14 @@ object ShardSelector extends LazyLogging {
 
         logger.info(s"Selecting shards from ${config.basename} with budget ${config.budget}")
 
+        val budgetBasename = s"${config.basename}$BudgetIndicator[${config.budget}]"
+
         val experiment = QueryShardExperiment.fromBasename(config.basename)
         val selection = new ShardSelector(experiment, config.budget).selection
-        writeSelection(config.basename, selection)
+        writeSelection(budgetBasename, selection)
         val r = resultsByShardsAndBucketsFromBasename(config.basename)
         val selected = r.select(selection)
-        writeSelected(config.basename, selected)
+        writeSelected(budgetBasename, selected)
         if (r.hasScores) writeSelectedScores(config.basename, selected)
 
       case None =>

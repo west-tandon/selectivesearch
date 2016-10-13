@@ -14,7 +14,7 @@ object ExportSelectedToTrec extends LazyLogging {
   def main(args: Array[String]): Unit = {
 
     case class Config(basename: String = null,
-                      model: String = null)
+                      input: String = null)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -23,6 +23,10 @@ object ExportSelectedToTrec extends LazyLogging {
         .text("the prefix of the files")
         .required()
 
+      opt[String]('i', "input")
+        .action((x, c) => c.copy(input = x))
+        .text("the input to be exported")
+
     }
 
     parser.parse(args, Config()) match {
@@ -30,8 +34,10 @@ object ExportSelectedToTrec extends LazyLogging {
 
         logger.info(s"Exporting results at ${config.basename} to TREC format")
 
+        val input = if (config.input == null) config.basename else config.input
+
         TrecResults
-          .fromSelected(config.basename)
+          .fromSelected(config.basename, input)
           .store(config.basename)
 
       case None =>
