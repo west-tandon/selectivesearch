@@ -13,13 +13,13 @@ object Load {
     lines(s"$basename$suffix")(converter)
 
   def queryLevelSequence[T](basename: String, suffix: String, converter: String => T): Iterator[Seq[T]] =
-    lines(s"$basename$suffix")(_.split(FieldSplitter).toSeq.map(converter))
+    lines(s"$basename$suffix")(_.split(FieldSplitter).filter(_.length > 0).toSeq.map(converter))
 
   def shardLevelSequence[T](basename: String, suffix: String, converter: String => T): Iterator[Seq[Seq[T]]] = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
     new BulkIterator(
       for (s <- 0 until shardCount) yield
-        lines(s"$basename#$s$suffix")(_.split(FieldSplitter).toSeq.map(converter))
+        lines(s"$basename#$s$suffix")(_.split(FieldSplitter).filter(_.length > 0).toSeq.map(converter))
     )
   }
 
@@ -48,7 +48,7 @@ object Load {
       for (s <- 0 until shardCount) yield
         new BulkIterator(
           for (b <- 0 until bucketCount)
-            yield lines(s"$basename#$s#$b$suffix")(_.split(FieldSplitter).toSeq.map(converter))
+            yield lines(s"$basename#$s#$b$suffix")(_.split(FieldSplitter).filter(_.length > 0).toSeq.map(converter))
         )
     )
   }
