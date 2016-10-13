@@ -2,6 +2,7 @@ package edu.nyu.tandon.search.selective
 
 import java.io._
 
+import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.ShardSelector.bucketsWithinBudget
 import edu.nyu.tandon.search.selective.data.{Bucket, QueryShardExperiment, ShardQueue}
 import edu.nyu.tandon.search.selective.data.results._
@@ -38,7 +39,7 @@ class ShardSelector(val queryShardExperiment: QueryShardExperiment,
 
 }
 
-object ShardSelector {
+object ShardSelector extends LazyLogging {
 
   val CommandName = "select-shards"
 
@@ -100,6 +101,8 @@ object ShardSelector {
 
     parser.parse(args, Config()) match {
       case Some(config) =>
+
+        logger.info(s"Selecting shards from ${config.basename} with budget ${config.budget}")
 
         val experiment = QueryShardExperiment.fromBasename(config.basename)
         val selection = new ShardSelector(experiment, config.budget).selection

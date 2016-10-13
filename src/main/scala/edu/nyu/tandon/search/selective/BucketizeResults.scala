@@ -1,5 +1,6 @@
 package edu.nyu.tandon.search.selective
 
+import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.loadProperties
 import edu.nyu.tandon.search.selective.data.results.{FlatResults, _}
 import scopt.OptionParser
@@ -7,7 +8,7 @@ import scopt.OptionParser
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-object BucketizeResults {
+object BucketizeResults extends LazyLogging {
 
   val CommandName = "bucketize"
 
@@ -42,17 +43,27 @@ object BucketizeResults {
 
         shard match {
           case Some(shardId) =>
+
             val bucketSize = math.ceil(properties.getProperty(s"maxId.$shardId").toDouble / bucketCount.toDouble).toLong
+
+            logger.info(s"Bucketizing shard $shardId with bucket size $bucketSize")
+
             FlatResults
               .fromBasename(config.basename)
               .bucketize(bucketSize, bucketCount)
               .store(config.basename)
+
           case None =>
+
             val bucketSizes = for (shardId <- 0 until shardCount) yield
               math.ceil(properties.getProperty(s"maxId.$shardId").toDouble / bucketCount.toDouble).toLong
+
+            logger.info(s"Bucketizing all $shardCount shards with bucket sizes: ${bucketSizes.mkString(" ")}")
+
             resultsByShardsFromBasename(basename)
-              .bucketize(bucketSizes)
+              .bucketize(bucketSizes, bucketCount)
               .store(basename)
+
         }
 
       case None =>

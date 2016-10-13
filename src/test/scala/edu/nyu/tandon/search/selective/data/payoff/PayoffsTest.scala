@@ -27,7 +27,7 @@ class PayoffsTest extends BaseFunSuite {
 
   test("fromPayoffs") {
     new ExpectedPayoffs {
-      val actual = Payoffs.fromPayoffs(s"$resourcesPath/test")
+      val actual = Payoffs.fromPayoffs(s"$resourcesPath/test").toSeq
       for ((sa, se) <- actual.zipAll(expected, Seq(), Seq()))
         for ((a, e) <- sa.zipAll(se, Seq(), Seq()))
           a should contain theSameElementsAs e
@@ -43,7 +43,7 @@ class PayoffsTest extends BaseFunSuite {
 
   test("fromResults") {
     new ExpectedPayoffs {
-      val actual = Payoffs.fromResults(s"$resourcesPath/test")
+      val actual = Payoffs.fromResults(s"$resourcesPath/test").toSeq
       for ((sa, se) <- actual.zipAll(expected, Seq(), Seq()))
         for ((a, e) <- sa.zipAll(se, Seq(), Seq()))
           a should contain theSameElementsAs e

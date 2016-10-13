@@ -3,59 +3,86 @@ package edu.nyu.tandon.search.selective.data.results
 import java.io.FileWriter
 import java.nio.file.{Files, Paths}
 
+import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective._
+import edu.nyu.tandon.search.selective.data.results.FlatResults.{closeWriters, writeLine, writers}
 import edu.nyu.tandon.{base => _, _}
-
-import scala.io.Source
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class FlatResults(val sequence: Iterable[ResultLine], val hasScores: Boolean) extends Iterable[ResultLine] {
+class FlatResults(val iterator: Iterator[ResultLine], val hasScores: Boolean) extends Iterator[ResultLine] with LazyLogging {
 
-  override def iterator: Iterator[ResultLine] = sequence.iterator
+  override def hasNext: Boolean = iterator.hasNext
+  override def next(): ResultLine = iterator.next()
 
   def bucketize(bucketSize: Long, bucketCount: Int): GroupedResults =
     new GroupedResults(
-      for (b <- 0 until bucketCount) yield
-          new FlatResults(this.map(_.groupByBuckets(bucketSize, bucketCount)(b)), hasScores)
+      iterator.map(_.groupByBuckets(bucketSize, bucketCount)),
+      bucketCount,
+      hasScores
     )
 
   def store(basename: String): Unit = {
-    val ((queries, localDocumentIds), (globalDocumentIds, scores)): ((Iterable[String], Iterable[String]), (Iterable[String], Iterable[Option[String]])) = {
-      val mid = this.map(_.toStringTuple).unzip { case (a, b, c, d) => ((a, b), (c, d)) }
-      (mid._1.unzip, mid._2.unzip)
-    }
-    storeStrings(Path.toQueries(basename), queries)
-    storeStrings(Path.toLocalResults(basename), localDocumentIds)
-    storeStrings(Path.toGlobalResults(basename), globalDocumentIds)
-    if (hasScores) storeStrings(Path.toScores(basename), scores.map(_.get))
+
+    logger.debug(s"Storing results to $basename")
+
+    val (qw, lw, gw, sw) = writers(basename, hasScores)
+    for (resultLine <- iterator) writeLine(qw, lw, gw, sw, resultLine)
+    closeWriters(qw, lw, gw, sw)
+
   }
 
-  def storeStrings(file: String, strings: Iterable[String]): Unit = {
-    val writer = new FileWriter(file)
-    for (s <- strings) writer.append(s"$s\n")
-    writer.close()
-  }
 }
 
-object FlatResults {
+object FlatResults extends LazyLogging {
+
+  def writers(basename: String, hasScores: Boolean): (FileWriter, FileWriter, FileWriter, Option[FileWriter]) = (
+    new FileWriter(Path.toQueries(basename)),
+    new FileWriter(Path.toLocalResults(basename)),
+    new FileWriter(Path.toGlobalResults(basename)),
+    if (hasScores) Some(new FileWriter(Path.toScores(basename))) else None
+  )
+
+  def closeWriters(qw: FileWriter, lw: FileWriter, gw: FileWriter, sw: Option[FileWriter]) = {
+    qw.close()
+    lw.close()
+    gw.close()
+    sw match {
+      case Some(w) => w.close()
+      case None =>
+    }
+  }
+
+  def writeLine(qw: FileWriter, lw: FileWriter, gw: FileWriter, sw: Option[FileWriter], resultLine: ResultLine) = {
+    val (q, l, g, s) = resultLine.toStringTuple
+    logger.trace(s"Writing result line ($q, $l, $g, $s)")
+    qw.append(s"$q\n")
+    lw.append(s"$l\n")
+    gw.append(s"$g\n")
+    sw match {
+      case Some(w) => w.append(s"${s.get}\n")
+      case None =>
+    }
+  }
 
   def fromBasename(basename: String): FlatResults = {
+
     val queries = Load.queriesAt(base(basename))
     val localDocs = lines(Path.toLocalResults(basename))
     val globalDocs = lines(Path.toGlobalResults(basename))
 
     Files.exists(Paths.get(Path.toScores(basename))) match {
       case true =>
-        val scores = Source.fromFile(Path.toScores(basename)).getLines().toIterable
-        new FlatResults(((queries.toList zip localDocs) zip (globalDocs zip scores)).map {
+        val scores = lines(Path.toScores(basename))
+        new FlatResults(((queries zip localDocs) zip (globalDocs zip scores)).map {
           case ((q, l), (g, s)) =>
+            logger.trace(s"Reading result line ($q, $l, $g, $s)")
             ResultLine.fromString(query = q, localDocumentIds = l, globalDocumentIds = g, scores = s)
         }, true)
       case false =>
-        new FlatResults((queries, localDocs, globalDocs).zipped.map {
-          case (q, l, g) => ResultLine.fromString(query = q, localDocumentIds = l, globalDocumentIds = g)
+        new FlatResults(((queries zip localDocs) zip globalDocs).map {
+          case ((q, l), g) => ResultLine.fromString(query = q, localDocumentIds = l, globalDocumentIds = g)
         }, false)
     }
   }

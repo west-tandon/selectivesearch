@@ -1,12 +1,13 @@
 package edu.nyu.tandon.search.selective
 
+import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.payoff.Payoffs
 import scopt.OptionParser
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-object ResolvePayoffs {
+object ResolvePayoffs extends LazyLogging {
 
   val CommandName = "resolve-payoffs"
 
@@ -25,6 +26,8 @@ object ResolvePayoffs {
 
     parser.parse(args, Config()) match {
       case Some(config) =>
+
+        logger.info(s"Resolving payoffs for ${config.basename}")
 
         Payoffs
           .fromResults(config.basename)

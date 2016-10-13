@@ -1,18 +1,40 @@
 package edu.nyu.tandon.search.selective.data.results
 
-import edu.nyu.tandon.utils.BulkIterator
+import com.typesafe.scalalogging.LazyLogging
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class GroupedResults(val sequence: Seq[FlatResults]) extends Iterable[Seq[ResultLine]] {
-  override def iterator: Iterator[Seq[ResultLine]] = new BulkIterator[ResultLine](sequence.map(_.iterator))
-  def store(basename: String): Unit = for ((bucket, b) <- sequence.zipWithIndex) bucket.store(s"$basename#$b")
-  def bucketize(bucketSizes: Seq[Long]): GroupedGroupedResults = {
-    require(sequence.length == bucketSizes.length, "discrepancy in shard counts")
+class GroupedResults(val iterator: Iterator[Seq[ResultLine]], val groups: Int, val hasScores: Boolean)
+  extends Iterator[Seq[ResultLine]] with LazyLogging {
+
+  override def hasNext: Boolean = iterator.hasNext
+  override def next(): Seq[ResultLine] = iterator.next
+
+  def store(basename: String): Unit = {
+
+    val writers = for (s <- 0 until groups)
+      yield FlatResults.writers(s"$basename#$s", hasScores)
+
+    for ((resultLinesForQuery, i) <- iterator.zipWithIndex) {
+      logger.info(s"Processing query $i")
+      for ((resultLine, (qw, lw, gw, sw)) <- resultLinesForQuery zip writers)
+        FlatResults.writeLine(qw, lw, gw, sw, resultLine)
+    }
+
+    for ((qw, lw, gw, sw) <- writers) FlatResults.closeWriters(qw, lw, gw, sw)
+
+  }
+
+  def bucketize(bucketSizes: Seq[Long], bucketCount: Int): GroupedGroupedResults = {
     new GroupedGroupedResults(
-      for ((shard, bucketSize) <- sequence zip bucketSizes) yield shard.bucketize(bucketSize, bucketSizes.length)
+      for (queryResults <- iterator) yield {
+        for ((shardResults, bucketSize) <- queryResults zip bucketSizes) yield {
+          shardResults.groupByBuckets(bucketSize, bucketCount)
+        }
+      },
+      hasScores
     )
   }
-  def hasScores: Boolean = sequence.head.hasScores
+
 }
