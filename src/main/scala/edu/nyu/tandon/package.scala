@@ -7,6 +7,7 @@ import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.learn.LearnPayoffs
 import org.apache.spark.sql.SparkSession
 
+import scala.io.Source
 import scalax.io.{LongTraversable, Resource}
 
 /**
@@ -28,10 +29,10 @@ package object tandon {
 
   def lineToLongs(line: String): Seq[Long] = line.split(FieldSplitter).filter(_.length > 0).toSeq.map(_.toLong)
   def lineToDoubles(line: String): Seq[Double] = line.split(FieldSplitter).filter(_.length > 0).toSeq.map(_.toDouble)
-  def lines[T](file: String)(implicit converter: String => T): Iterable[T] = {
-    val lines = Resource.fromFile(file).lines()
+  def lines[T](file: String)(implicit converter: String => T): Iterator[T] = {
+    val lines = Source.fromFile(file).getLines()
     require(lines.nonEmpty, s"the file $file is either empty or doesn't exist")
-    lines.map(converter).toIterable
+    lines.map(converter)
   }
 
 }

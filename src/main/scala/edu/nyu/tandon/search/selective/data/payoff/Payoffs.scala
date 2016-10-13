@@ -3,11 +3,11 @@ package edu.nyu.tandon.search.selective.data.payoff
 import java.io.FileWriter
 import java.nio.file.Files
 
+import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.learn.LearnPayoffs.{BucketColumn, FeaturesColumn, QueryColumn, ShardColumn}
 import edu.nyu.tandon.search.selective.learn.PredictPayoffs.PredictedLabelColumn
-import edu.nyu.tandon.utils.ZippableSeq
 import org.apache.commons.io.FileUtils
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.regression.RandomForestRegressionModel
@@ -19,9 +19,10 @@ import scala.language.implicitConversions
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class Payoffs(val payoffs: Iterable[Seq[Seq[Double]]]) extends Iterable[Seq[Seq[Double]]] {
+class Payoffs(val payoffs: Iterator[Seq[Seq[Double]]]) extends Iterator[Seq[Seq[Double]]] with LazyLogging {
 
-  override def iterator: Iterator[Seq[Seq[Double]]] = payoffs.iterator
+  override def hasNext: Boolean = payoffs.hasNext
+  override def next(): Seq[Seq[Double]] = payoffs.next()
 
   def store(basename: String): Unit = {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
@@ -32,10 +33,12 @@ class Payoffs(val payoffs: Iterable[Seq[Seq[Double]]]) extends Iterable[Seq[Seq[
         for (b <- 0 until bucketCount) yield
           new FileWriter(Path.toPayoffs(basename, s, b))
 
-    for (queryPayoffs <- payoffs;
-        (shardPayoffs, shardWriters) <- queryPayoffs zip writers;
-        (payoff, writer) <- shardPayoffs zip shardWriters
-    ) writer.append(s"$payoff\n")
+    for ((queryPayoffs, i) <- payoffs.zipWithIndex) {
+      logger.info(s"Processing query $i")
+      for ((shardPayoffs, shardWriters) <- queryPayoffs zip writers;
+           (payoff, writer) <- shardPayoffs zip shardWriters
+      ) writer.append(s"$payoff\n")
+    }
 
     for (wl <- writers; w <- wl) w.close()
   }
@@ -44,7 +47,7 @@ class Payoffs(val payoffs: Iterable[Seq[Seq[Double]]]) extends Iterable[Seq[Seq[
 
 object Payoffs {
 
-  implicit def doubleSeqSeqIterable2Payoffs(payoffs: Iterable[Seq[Seq[Double]]]): Payoffs = new Payoffs(payoffs)
+  implicit def doubleSeqSeqIterable2Payoffs(payoffs: Iterator[Seq[Seq[Double]]]): Payoffs = new Payoffs(payoffs)
 
   def fromPayoffs(basename: String): Payoffs = Load.payoffsAt(basename)
 
@@ -52,16 +55,12 @@ object Payoffs {
     val shardCount = loadProperties(basename).getProperty("shards.count").toInt
     val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
     val globalResults = Load.globalResultDocumentsAt(basename)
+    val bucketGlobalResults = Load.bucketizedGlobalResultsAt(basename)
     new Payoffs(
-      new ZippableSeq(for (s <- 0 until shardCount) yield
-        new ZippableSeq(for (b <- 0 until bucketCount) yield {
-          val shardResultsSorted = lines(Path.toGlobalResults(basename, s, b)).map(lineToLongs(_).sorted).toIterable
-          val filteredShardResults = globalResults.zip(shardResultsSorted) map {
-            case (global, shard) => shard.count(global.contains(_)).toDouble
-          }
-          filteredShardResults
-        }).zipped
-      ).zipped
+      for ((globalResultsForQuery, bucketizedGlobalResultsForQuery) <- globalResults zip bucketGlobalResults) yield
+        for (bucketizedGlobalResultsForShard <- bucketizedGlobalResultsForQuery) yield
+          for (bucketizedGlobalResultsForBucket <- bucketizedGlobalResultsForShard) yield
+            bucketizedGlobalResultsForBucket.count(globalResultsForQuery.contains(_)).toDouble
     )
   }
 
@@ -92,7 +91,7 @@ object Payoffs {
     FileUtils.deleteDirectory(tmp.toFile)
 
     new Payoffs(
-      for (queryId <- 0 until queryCount) yield
+      (for (queryId <- 0 until queryCount) yield
         for (shardId <- 0 until shardCount) yield
           for (bucketId <- 0 until bucketCount) yield
             predictions(
@@ -105,7 +104,7 @@ object Payoffs {
                 require(s == shardId, s"expected query ID $shardId, found $s")
                 require(b == bucketId, s"expected query ID $bucketId, found $b")
                 payoff
-            }
+            }).iterator
     )
 
   }

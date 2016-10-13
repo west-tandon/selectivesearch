@@ -1,14 +1,14 @@
 package edu.nyu.tandon.search.selective.data.results
 
-import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon._
+import edu.nyu.tandon.search.selective._
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class ResultLine(val query: String,
-                 val localDocumentIds: Seq[Long],
-                 val globalDocumentIds: Seq[Long],
+case class ResultLine(query: String,
+                 localDocumentIds: Seq[Long],
+                 globalDocumentIds: Seq[Long],
                  scores: Option[Seq[Double]]) extends Iterable[Result] {
 
   def apply(query: String, localDocumentIds: Seq[Long], globalDocumentIds: Seq[Long], scores: Option[Seq[Double]]) =
