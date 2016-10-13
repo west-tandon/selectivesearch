@@ -13,7 +13,8 @@ object Run {
     (ResolvePayoffs.CommandName, ResolvePayoffs.main),
     (ShardSelector.CommandName, ShardSelector.main),
     (LearnPayoffs.CommandName, LearnPayoffs.main),
-    (PredictPayoffs.CommandName, PredictPayoffs.main)
+    (PredictPayoffs.CommandName, PredictPayoffs.main),
+    (Overlap.CommandName, Overlap.main)
   )
 
   def printUsage(): Unit = {

@@ -89,7 +89,7 @@ class ShardSelectorTest extends BaseFunSuite {
     ))
 
     // then
-    compareFilesBetweenDirectories(Seq("test.selection", "test.selected.docs", "test.selected.scores"), resourcesPath, tmpDir.toString)
+    compareFilesBetweenDirectories(Seq("test$[5.0].selection", "test$[5.0].selected.docs", "test$[5.0].selected.scores"), resourcesPath, tmpDir.toString)
   }
 
   test("main: without scores") {
@@ -103,7 +103,7 @@ class ShardSelectorTest extends BaseFunSuite {
     ))
 
     // then
-    compareFilesBetweenDirectories(Seq("test.selection"), resourcesPath, tmpDir.toString)
+    compareFilesBetweenDirectories(Seq("test$[5.0].selection"), resourcesPath, tmpDir.toString)
   }
 
 }

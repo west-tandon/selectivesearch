@@ -2,6 +2,7 @@ package edu.nyu.tandon.search.selective.data.results.trec
 
 import java.nio.file.Files
 
+import edu.nyu.tandon.search.selective.BudgetIndicator
 import edu.nyu.tandon.test.BaseFunSuite
 import org.scalatest.Matchers._
 
@@ -42,7 +43,7 @@ class TrecResultsTest extends BaseFunSuite {
 
   test("fromSelected") {
     new Trec {
-      TrecResults.fromSelected(s"$resourcesPath/test").map(_.toString).toSeq should contain theSameElementsInOrderAs expected
+      TrecResults.fromSelected(s"$resourcesPath/test", s"$resourcesPath/test$BudgetIndicator[5.0]").map(_.toString).toSeq should contain theSameElementsInOrderAs expected
     }
   }
 
