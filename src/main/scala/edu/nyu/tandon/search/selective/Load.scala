@@ -48,7 +48,7 @@ object Load {
       for (s <- 0 until shardCount) yield
         new BulkIterator(
           for (b <- 0 until bucketCount)
-            yield lines(s"$basename#$s#$b$suffix")(_.split(FieldSplitter).toSeq.map(converter))
+            yield lines(s"$basename#$s#$b$suffix")(_.split(FieldSplitter).filter(_.length > 0).toSeq.map(converter))
         )
     )
   }

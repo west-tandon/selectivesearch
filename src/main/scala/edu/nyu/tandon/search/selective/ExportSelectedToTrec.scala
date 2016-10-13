@@ -1,12 +1,13 @@
 package edu.nyu.tandon.search.selective
 
+import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.results.trec.TrecResults
 import scopt.OptionParser
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-object ExportSelectedToTrec {
+object ExportSelectedToTrec extends LazyLogging {
 
   val CommandName = "export-trec"
 
@@ -26,6 +27,8 @@ object ExportSelectedToTrec {
 
     parser.parse(args, Config()) match {
       case Some(config) =>
+
+        logger.info(s"Exporting results at ${config.basename} to TREC format")
 
         TrecResults
           .fromSelected(config.basename)
