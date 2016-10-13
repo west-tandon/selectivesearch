@@ -25,6 +25,8 @@ object Path {
   val LabelSuffix = ".label"
   val ModelSuffix = ".model"
   val EvalSuffix = ".eval"
+  val OverlapsSuffix = ".overlaps"
+  val OverlapSuffix = ".overlap"
 
   private def toAny(basename: String, suffix: String): String = s"$basename$suffix"
   private def toAny(basename: String, shardId: Int, suffix: String): String = s"$basename#$shardId$suffix"
@@ -40,6 +42,8 @@ object Path {
   def toTrecIds(basename: String): String = toAny(basename, TrecIdSuffix)
   def toModel(basename: String): String = toAny(basename, ModelSuffix)
   def toModelEval(basename: String): String = s"${toModel(basename)}$EvalSuffix"
+  def toOverlaps(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapsSuffix")
+  def toOverlap(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapSuffix")
 
   /* Shard level */
 

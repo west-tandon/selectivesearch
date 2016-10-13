@@ -59,7 +59,7 @@ object Load {
   def titlesAt(basename: String): Iterator[String] = queryLevelValue(basename, TitlesSuffix, _.toString)
   def trecIdsAt(basename: String): Iterator[Long] = queryLevelValue(basename, TrecIdSuffix, _.toLong)
 
-  def globalResultDocumentsAt(basename: String): Iterator[Seq[Long]] = queryLevelValue(basename, s"$ResultsSuffix$GlobalSuffix", lineToLongs(_).sorted)
+  def globalResultDocumentsAt(basename: String): Iterator[Seq[Long]] = queryLevelValue(base(basename), s"$ResultsSuffix$GlobalSuffix", lineToLongs(_).sorted)
   def selectedDocumentsAt(basename: String): Iterator[Seq[Long]] = queryLevelSequence(basename, s"$SelectedSuffix$DocumentsSuffix", _.toLong)
   def selectedScoresAt(basename: String): Iterator[Seq[Double]] = queryLevelSequence(basename, s"$SelectedSuffix$ScoresSuffix", _.toDouble)
 
