@@ -74,7 +74,7 @@ object ShardSelector extends LazyLogging {
   def writeSelectedScores(basename: String, selected: Iterable[Seq[Result]]): Unit = {
     val scoresWriter = new BufferedWriter(new FileWriter(Path.toSelectedScores(basename)))
     for (q <- selected) {
-      scoresWriter.append(q.map(_.scoreValue).mkString(FieldSeparator))
+      scoresWriter.append(q.map(_.score).mkString(FieldSeparator))
       scoresWriter.newLine()
     }
     scoresWriter.close()
@@ -112,7 +112,7 @@ object ShardSelector extends LazyLogging {
         val r = resultsByShardsAndBucketsFromBasename(config.basename)
         val selected = r.select(selection)
         writeSelected(budgetBasename, selected)
-        if (r.hasScores) writeSelectedScores(config.basename, selected)
+        writeSelectedScores(config.basename, selected)
 
       case None =>
     }

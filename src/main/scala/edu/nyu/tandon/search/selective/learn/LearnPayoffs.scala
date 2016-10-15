@@ -1,6 +1,7 @@
 package edu.nyu.tandon.search.selective.learn
 
 import edu.nyu.tandon.search.selective._
+import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.data.payoff.Payoffs
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.linalg.Vectors
@@ -25,9 +26,10 @@ object LearnPayoffs {
   val BucketColumn = "bucket"
 
   def trainingDataFromBasename(basename: String): DataFrame = {
-    val lengths = Load.queryLengthsAt(basename)
-    val redde = Load.reddeScoresAt(basename)
-    val shrkc = Load.shrkcScoresAt(basename)
+    val features = Features.get(basename)
+    val lengths = features.queryLengths
+    val redde = features.reddeScores
+    val shrkc = features.shrkcScores
     val labels = Payoffs.fromPayoffs(basename)
     val data = for ((((queryLength, reddeScores), shrkcScores), payoffs) <- lengths.zip(redde).zip(shrkc).zip(labels);
          ((shardReddeScore, shardShrkcScore), shardPayoffs) <- reddeScores.zip(shrkcScores).zip(payoffs);

@@ -1,15 +1,17 @@
 package edu.nyu.tandon.search.selective
 
+import java.io.File
+import java.nio.file.Paths
+
 /**
   * @author michal.siedlaczek@nyu.edu
   */
 object Path {
 
   val CostSuffix = ".cost"
-//  val DivisionSuffix = ".division"
   val PayoffSuffix = ".payoff"
   val QueriesSuffix = ".queries"
-  val QueryLengthsSuffix = ".qlen"
+  val QueryLengthsSuffix = ".lengths"
   val SelectionSuffix = ".selection"
   val SelectedSuffix = ".selected"
   val ResultsSuffix = ".results"
@@ -54,5 +56,10 @@ object Path {
   def toGlobalResults(basename: String): String = toAny(basename, s"$ResultsSuffix$GlobalSuffix")
   def toScores(basename: String): String = toAny(basename, s"$ResultsSuffix$ScoresSuffix")
   def toGlobalResults(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, s"$ResultsSuffix$GlobalSuffix")
+
+//  def absolute(path: String): String = path.head match {
+//    case '/' => path
+//    case _   => s"${new File(path).getAbsolutePath}"
+//  }
 
 }

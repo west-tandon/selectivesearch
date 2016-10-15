@@ -5,7 +5,7 @@ import com.typesafe.scalalogging.LazyLogging
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class GroupedResults(val iterator: Iterator[Seq[ResultLine]], val groups: Int, val hasScores: Boolean)
+class GroupedResults(val iterator: Iterator[Seq[ResultLine]], val groups: Int)
   extends Iterator[Seq[ResultLine]] with LazyLogging {
 
   override def hasNext: Boolean = iterator.hasNext
@@ -14,15 +14,15 @@ class GroupedResults(val iterator: Iterator[Seq[ResultLine]], val groups: Int, v
   def store(basename: String): Unit = {
 
     val writers = for (s <- 0 until groups)
-      yield FlatResults.writers(s"$basename#$s", hasScores)
+      yield FlatResults.writers(s"$basename#$s")
 
     for ((resultLinesForQuery, i) <- iterator.zipWithIndex) {
       logger.info(s"Processing query $i")
-      for ((resultLine, (qw, lw, gw, sw)) <- resultLinesForQuery zip writers)
-        FlatResults.writeLine(qw, lw, gw, sw, resultLine)
+      for ((resultLine, (lw, gw, sw)) <- resultLinesForQuery zip writers)
+        FlatResults.writeLine(lw, gw, sw, resultLine)
     }
 
-    for ((qw, lw, gw, sw) <- writers) FlatResults.closeWriters(qw, lw, gw, sw)
+    for ((lw, gw, sw) <- writers) FlatResults.closeWriters(lw, gw, sw)
 
   }
 
@@ -32,8 +32,7 @@ class GroupedResults(val iterator: Iterator[Seq[ResultLine]], val groups: Int, v
         for ((shardResults, bucketSize) <- queryResults zip bucketSizes) yield {
           shardResults.groupByBuckets(bucketSize, bucketCount)
         }
-      },
-      hasScores
+      }
     )
   }
 
