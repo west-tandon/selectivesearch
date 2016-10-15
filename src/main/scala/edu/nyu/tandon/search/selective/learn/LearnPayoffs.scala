@@ -47,7 +47,7 @@ object LearnPayoffs {
 
     val parser = new OptionParser[Config](CommandName) {
 
-      opt[String]('n', "basename")
+      arg[String]("<basename>")
         .action((x, c) => c.copy(basename = x))
         .text("the prefix of the files")
         .required()
