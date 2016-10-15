@@ -9,10 +9,10 @@ import edu.nyu.tandon.utils.ZippedIterator
   */
 package object results {
 
-  def resultsByShardsFromBasename(basename: String): GroupedResults = {
+  def resultsByShardsFromBasename(basename: String, k: Int): GroupedResults = {
     val features = Features.get(basename)
     val shardCount = features.shardCount
-    val shards = for (s <- 0 until shardCount) yield FlatResults.fromFeatures(features, s)
+    val shards = for (s <- 0 until shardCount) yield FlatResults.fromFeatures(features, s, k)
     new GroupedResults(ZippedIterator(shards), shardCount)
   }
 

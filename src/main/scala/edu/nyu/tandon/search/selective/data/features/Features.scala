@@ -36,8 +36,11 @@ class Features(basename: String) {
         val localIds = lines(s"$basename#$s.results.local")(lineToLongs)
         val globalIds = lines(s"$basename#$s.results.global")(lineToLongs)
         val scores = lines(s"$basename#$s.results.scores")(lineToDoubles)
-        for (((l, g), s) <- localIds.zip(globalIds).zip(scores)) yield
+        for (((l, g), s) <- localIds.zip(globalIds).zip(scores)) yield {
+          require(l.length == g.length && g.length == s.length,
+            s"different number of elements in a line among (local, global and scores) = (${l.length}, ${g.length}, ${s.length})")
           for (((localId, globalId), score) <- l.zip(g).zip(s)) yield Result(localId, globalId, score)
+        }
       }
     ).strict.map(_.toIndexedSeq)
 

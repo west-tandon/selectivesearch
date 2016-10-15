@@ -40,6 +40,7 @@ object BucketizeResults extends LazyLogging {
 
         val properties = loadProperties(basename)
         val bucketCount = properties.getProperty("buckets.count").toInt
+        val k = properties.getProperty("k").toInt
         val features = Features.get(basename)
         val shardCount = features.shardCount
 
@@ -51,14 +52,11 @@ object BucketizeResults extends LazyLogging {
             logger.info(s"Bucketizing shard $shardId with bucket size $bucketSize")
 
             FlatResults
-              .fromFeatures(features, shardId)
+              .fromFeatures(features, shardId, k)
               .bucketize(bucketSize, bucketCount)
               .store(config.basename)
 
           case None =>
-
-//            val bucketSizes = for (shardId <- 0 until shardCount) yield
-//              math.ceil(properties.getProperty(s"maxId.$shardId").toDouble / bucketCount.toDouble).toLong
 
             val bucketSizes = features.shardSizes.map(
               (shardSize) => math.ceil(shardSize.toDouble / bucketCount.toDouble).toLong
@@ -66,7 +64,7 @@ object BucketizeResults extends LazyLogging {
 
             logger.info(s"Bucketizing all $shardCount shards with bucket sizes: ${bucketSizes.mkString(" ")}")
 
-            resultsByShardsFromBasename(basename)
+            resultsByShardsFromBasename(basename, k)
               .bucketize(bucketSizes, bucketCount)
               .store(basename)
 

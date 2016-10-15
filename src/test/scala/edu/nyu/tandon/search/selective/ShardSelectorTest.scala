@@ -84,7 +84,7 @@ class ShardSelectorTest extends BaseFunSuite {
 
     // when
     ShardSelector.main(Array(
-      "--basename", s"$tmpDir/test",
+      s"$tmpDir/test",
       "--budget", "5"
     ))
 

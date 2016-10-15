@@ -69,9 +69,9 @@ object FlatResults extends LazyLogging {
     })
   }
 
-  def fromFeatures(features: Features, shardId: Int): FlatResults = {
+  def fromFeatures(features: Features, shardId: Int, k: Int): FlatResults = {
     val queries = features.queries
-    new FlatResults(features.shardResults.map(_(shardId)).map(ResultLine(_)))
+    new FlatResults(features.shardResults.map(_(shardId)).map((l) => ResultLine(l.take(k))))
   }
 
 }

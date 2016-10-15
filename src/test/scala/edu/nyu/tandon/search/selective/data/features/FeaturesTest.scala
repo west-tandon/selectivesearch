@@ -97,7 +97,8 @@ class FeaturesTest extends BaseFunSuite {
           Result(105, 105000, 40.0),
           Result(106, 106000, 30.0),
           Result(207, 207000, 20.0),
-          Result(208, 208000, 10.0)
+          Result(208, 208000, 10.0),
+          Result(299, 9999999, 0.99)
         )
       }
     }

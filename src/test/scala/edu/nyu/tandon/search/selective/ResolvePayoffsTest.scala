@@ -12,7 +12,7 @@ class ResolvePayoffsTest extends BaseFunSuite {
     val tmpDir = createTemporaryCopyOfResources(regex = ".*sizes|.*results.*|.*properties")
 
     // when
-    ResolvePayoffs.main(Array("--basename", s"$tmpDir/test"))
+    ResolvePayoffs.main(Array(s"$tmpDir/test"))
 
     // then
     compareFilesBetweenDirectories(for (s <- 0 until 3; b <- 0 until 3) yield s"test#$s#$b.payoff",
