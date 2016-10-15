@@ -43,6 +43,16 @@ class Features(basename: String) {
         }
       }
     ).strict.map(_.toIndexedSeq)
+  def shardResults(shardId: Int): Iterator[Seq[Result]] = {
+    val localIds = lines(s"$basename#$shardId.results.local")(lineToLongs)
+    val globalIds = lines(s"$basename#$shardId.results.global")(lineToLongs)
+    val scores = lines(s"$basename#$shardId.results.scores")(lineToDoubles)
+    for (((l, g), s) <- localIds.zip(globalIds).zip(scores)) yield {
+      require(l.length == g.length && g.length == s.length,
+        s"different number of elements in a line among (local, global and scores) = (${l.length}, ${g.length}, ${s.length})")
+      for (((localId, globalId), score) <- l.zip(g).zip(s)) yield Result(localId, globalId, score)
+    }
+  }
 
 }
 

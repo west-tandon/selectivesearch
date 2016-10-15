@@ -70,7 +70,7 @@ object FlatResults extends LazyLogging {
   }
 
   def fromFeatures(features: Features, shardId: Int, k: Int): FlatResults = {
-    new FlatResults(features.shardResults.map(_(shardId)).map((l) => ResultLine(l.take(k))))
+    new FlatResults(features.shardResults(shardId).map((l) => ResultLine(l.take(k))))
   }
 
 }

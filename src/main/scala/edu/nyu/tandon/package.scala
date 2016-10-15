@@ -25,39 +25,9 @@ package object tandon {
     properties
   }
 
-//  implicit def toClosingSource(source: Source) = new {
-//    val lines = source.getLines()
-//    var stillOpen = true
-//    def getLinesAndClose() = new Iterator[String] {
-//      def hasNext = stillOpen && lines.hasNext
-//      def next = {
-//        val line = lines.next
-//        if (!lines.hasNext) { source.close() ; stillOpen = false }
-//        line
-//      }
-//    }
-//  }
-
   def lineToLongs(line: String): Seq[Long] = line.split(FieldSplitter).filter(_.length > 0).toSeq.map(_.toLong)
   def lineToDoubles(line: String): Seq[Double] = line.split(FieldSplitter).filter(_.length > 0).toSeq.map(_.toDouble)
   def lines[T](file: String)(implicit converter: String => T): Iterator[T] = {
-//    val lines = new Iterator[T] {
-//      val reader = new BufferedReader(new FileReader(file))
-//      var nextLine = reader.readLine()
-//      var closed = false
-//      override def hasNext: Boolean = nextLine != null
-//      override def next(): T = {
-//        val result = nextLine
-//        nextLine = reader.readLine()
-//        if (nextLine == null && !closed) {
-//          reader.close()
-//          closed = true
-//        }
-//        converter(result)
-//      }
-//    }
-//    val x = lines.next()
-//    require(lines.nonEmpty, s"the file $file is empty")
     new LineIterator(file).map(converter)
   }
 
