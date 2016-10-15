@@ -64,9 +64,13 @@ object BucketizeResults extends LazyLogging {
 
             logger.info(s"Bucketizing all $shardCount shards with bucket sizes: ${bucketSizes.mkString(" ")}")
 
-            resultsByShardsFromBasename(basename, k)
-              .bucketize(bucketSizes, bucketCount)
-              .store(basename)
+            for ((bucketSize, shardId) <- bucketSizes.zipWithIndex) {
+              logger.info(s"Bucketizing shard $shardId with bucket size $bucketSize")
+              FlatResults
+                .fromFeatures(features, shardId, k)
+                .bucketize(bucketSize, bucketCount)
+                .store(s"${config.basename}#$shardId")
+            }
 
         }
 

@@ -50,6 +50,6 @@ object Features {
   def get(basename: String): Features = {
     val path = loadProperties(basename).getProperty("features")
     if (new File(path).isAbsolute) new Features(path)
-    else new Features(s"${new File(basename).getParent}/$path")
+    else new Features(s"${new File(basename).getAbsoluteFile.getParent}/$path")
   }
 }
