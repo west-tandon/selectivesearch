@@ -41,7 +41,7 @@ object TrecResults extends LazyLogging {
   val TrecSplitter = "\\s+"
 
   def fromSelected(basename: String, input: String): TrecResults = {
-    val features = Features.get(basename)
+    val features = Features.get(base(basename))
     val documentIds = Load.selectedDocumentsAt(input)
     val scores = Load.selectedScoresAt(input)
     val titles = features.documentTitles.toIndexedSeq

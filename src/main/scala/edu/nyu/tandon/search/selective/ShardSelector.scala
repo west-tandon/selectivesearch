@@ -49,7 +49,7 @@ object ShardSelector extends LazyLogging {
   def bucketsWithinBudget(buckets: List[Bucket], budget: Double): List[Bucket] = {
     val budgets = buckets.scanLeft(budget)((budgetLeft, bucket) => budgetLeft - bucket.cost)
     buckets.zip(budgets).zipWithIndex.takeWhile {
-      case ((bucket: Bucket, budget: Double), i: Int) => (budget - bucket.cost >= 0 && bucket.payoff > 0) || i == 0
+      case ((bucket: Bucket, budget: Double), i: Int) => budget - bucket.cost >= 0 || i == 0
     }.unzip._1.unzip._1
   }
 
@@ -112,7 +112,7 @@ object ShardSelector extends LazyLogging {
         val r = resultsByShardsAndBucketsFromBasename(config.basename)
         val selected = r.select(selection)
         writeSelected(budgetBasename, selected)
-        writeSelectedScores(config.basename, selected)
+        writeSelectedScores(budgetBasename, selected)
 
       case None =>
     }

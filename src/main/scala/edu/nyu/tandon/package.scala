@@ -17,7 +17,7 @@ package object tandon {
 
   def defaultConverter(line: String) = line
 
-  def base(nestedBasename: String): String = nestedBasename.takeWhile(c => s"$c" != NestingIndicator)
+//  def base(nestedBasename: String): String = nestedBasename.takeWhile(c => s"$c" != NestingIndicator)
 
   def loadProperties(basename: String): Properties = {
     val properties = new Properties()
