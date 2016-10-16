@@ -50,35 +50,6 @@ class BucketizeResultsTest extends BaseFunSuite {
     )
   }
 
-  trait FilesWithoutScores {
-    val outputFileNames = Seq(
-      Seq(
-        s"test#0#0$ResultsSuffix$LocalSuffix",
-        s"test#0#1$ResultsSuffix$LocalSuffix",
-        s"test#0#2$ResultsSuffix$LocalSuffix",
-        s"test#0#0$ResultsSuffix$GlobalSuffix",
-        s"test#0#1$ResultsSuffix$GlobalSuffix",
-        s"test#0#2$ResultsSuffix$GlobalSuffix"
-      ),
-      Seq(
-        s"test#1#0$ResultsSuffix$LocalSuffix",
-        s"test#1#1$ResultsSuffix$LocalSuffix",
-        s"test#1#2$ResultsSuffix$LocalSuffix",
-        s"test#1#0$ResultsSuffix$GlobalSuffix",
-        s"test#1#1$ResultsSuffix$GlobalSuffix",
-        s"test#1#2$ResultsSuffix$GlobalSuffix"
-      ),
-      Seq(
-        s"test#2#0$ResultsSuffix$LocalSuffix",
-        s"test#2#1$ResultsSuffix$LocalSuffix",
-        s"test#2#2$ResultsSuffix$LocalSuffix",
-        s"test#2#0$ResultsSuffix$GlobalSuffix",
-        s"test#2#1$ResultsSuffix$GlobalSuffix",
-        s"test#2#2$ResultsSuffix$GlobalSuffix"
-      )
-    )
-  }
-
   test("parseBasename: no #") {
     parseBasename("test") shouldBe ("test", None)
   }
@@ -93,13 +64,13 @@ class BucketizeResultsTest extends BaseFunSuite {
     }
   }
 
-  test("main: shard with scores") {
+  test("main: shard") {
     new FilesWithScores {
       // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results.*|.*properties|.*queries")
+      val tmpDir = createTemporaryCopyOfResources(regex = "test\\.sizes|test#.\\.results.*|.*properties|.*queries")
 
       // when
-      BucketizeResults.main(Array("--basename", s"$tmpDir/test#0"))
+      BucketizeResults.main(Array(s"$tmpDir/test#0"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.head, getClass.getResource("/").getPath, tmpDir.toString)
@@ -108,39 +79,13 @@ class BucketizeResultsTest extends BaseFunSuite {
     }
   }
 
-  test("main: shard without scores") {
-    new FilesWithoutScores {
-      // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results\\.global|test#.\\.results\\.local|.*properties|.*queries")
-
-      // when
-      BucketizeResults.main(Array("--basename", s"$tmpDir/test#0"))
-
-      // then
-      compareFilesBetweenDirectories(outputFileNames.head, getClass.getResource("/").getPath, tmpDir.toString)
-    }
-  }
-
-  test("main: all with scores") {
+  test("main: all") {
     new FilesWithScores {
       // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results.*|test#.\\.scores|.*properties|.*queries")
+      val tmpDir = createTemporaryCopyOfResources(regex = "test\\.sizes|test#.\\.results.*|test#.\\.scores|.*properties|.*queries")
 
       // when
-      BucketizeResults.main(Array("--basename", s"$tmpDir/test"))
-
-      // then
-      compareFilesBetweenDirectories(outputFileNames.flatten, getClass.getResource("/").getPath, tmpDir.toString)
-    }
-  }
-
-  test("main: all without scores") {
-    new FilesWithoutScores {
-      // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.results\\.global|test#.\\.results\\.local|.*properties|.*queries")
-
-      // when
-      BucketizeResults.main(Array("--basename", s"$tmpDir/test"))
+      BucketizeResults.main(Array(s"$tmpDir/test"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.flatten, getClass.getResource("/").getPath, tmpDir.toString)

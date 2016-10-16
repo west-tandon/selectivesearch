@@ -11,7 +11,7 @@ class ZippableSeq[T](val innerSeq: Seq[Iterable[T]]) {
   implicit def indexedSeq2Expanded(s: IndexedSeq[Iterable[T]]): ZippableSeq[T] = new ZippableSeq[T](s)
 
   def zipped: Iterable[Seq[T]] = new Iterable[Seq[T]] {
-    override def iterator: Iterator[Seq[T]] = new BulkIterator[T](innerSeq.map(_.iterator))
+    override def iterator: Iterator[Seq[T]] = new ZippedIterator[T](innerSeq.map(_.iterator))
   }
 
 }

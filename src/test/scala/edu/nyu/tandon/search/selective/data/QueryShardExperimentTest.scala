@@ -17,12 +17,12 @@ class QueryShardExperimentTest extends FunSuite {
 
       assert(it.hasNext === true)
       assert(it.toList === List(
-        QueryData("query one", Seq(
+        QueryData(Seq(
           List(Bucket(0, 1, 1), Bucket(0, 0, 1), Bucket(0, 0, 1)),
           List(Bucket(1, 3, 1), Bucket(1, 2, 1), Bucket(1, 1, 1)),
           List(Bucket(2, 2, 1), Bucket(2, 1, 1), Bucket(2, 0, 1))
         )),
-        QueryData("query two", Seq(
+        QueryData(Seq(
           List(Bucket(0, 3, 1), Bucket(0, 3, 1), Bucket(0, 0, 1)),
           List(Bucket(1, 0, 1), Bucket(1, 0, 1), Bucket(1, 0, 1)),
           List(Bucket(2, 0, 1), Bucket(2, 0, 1), Bucket(2, 0, 1))

@@ -49,7 +49,7 @@ object ShardSelector extends LazyLogging {
   def bucketsWithinBudget(buckets: List[Bucket], budget: Double): List[Bucket] = {
     val budgets = buckets.scanLeft(budget)((budgetLeft, bucket) => budgetLeft - bucket.cost)
     buckets.zip(budgets).zipWithIndex.takeWhile {
-      case ((bucket: Bucket, budget: Double), i: Int) => (budget - bucket.cost >= 0 && bucket.payoff > 0) || i == 0
+      case ((bucket: Bucket, budget: Double), i: Int) => budget - bucket.cost >= 0 || i == 0
     }.unzip._1.unzip._1
   }
 
@@ -74,7 +74,7 @@ object ShardSelector extends LazyLogging {
   def writeSelectedScores(basename: String, selected: Iterable[Seq[Result]]): Unit = {
     val scoresWriter = new BufferedWriter(new FileWriter(Path.toSelectedScores(basename)))
     for (q <- selected) {
-      scoresWriter.append(q.map(_.scoreValue).mkString(FieldSeparator))
+      scoresWriter.append(q.map(_.score).mkString(FieldSeparator))
       scoresWriter.newLine()
     }
     scoresWriter.close()
@@ -87,7 +87,7 @@ object ShardSelector extends LazyLogging {
 
     val parser = new OptionParser[Config](CommandName) {
 
-      opt[String]('i', "basename")
+      arg[String]("<basename>")
         .action((x, c) => c.copy(basename = x))
         .text("the prefix of the files")
         .required()
@@ -112,7 +112,7 @@ object ShardSelector extends LazyLogging {
         val r = resultsByShardsAndBucketsFromBasename(config.basename)
         val selected = r.select(selection)
         writeSelected(budgetBasename, selected)
-        if (r.hasScores) writeSelectedScores(config.basename, selected)
+        writeSelectedScores(budgetBasename, selected)
 
       case None =>
     }

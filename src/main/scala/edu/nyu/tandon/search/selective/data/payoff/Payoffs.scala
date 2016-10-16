@@ -6,6 +6,7 @@ import java.nio.file.Files
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
+import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.learn.LearnPayoffs.{BucketColumn, FeaturesColumn, QueryColumn, ShardColumn}
 import edu.nyu.tandon.search.selective.learn.PredictPayoffs.PredictedLabelColumn
 import org.apache.commons.io.FileUtils
@@ -25,7 +26,7 @@ class Payoffs(val payoffs: Iterator[Seq[Seq[Double]]]) extends Iterator[Seq[Seq[
   override def next(): Seq[Seq[Double]] = payoffs.next()
 
   def store(basename: String): Unit = {
-    val shardCount = loadProperties(basename).getProperty("shards.count").toInt
+    val shardCount = Features.get(basename).shardCount
     val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
 
     val writers =
@@ -52,26 +53,29 @@ object Payoffs {
   def fromPayoffs(basename: String): Payoffs = Load.payoffsAt(basename)
 
   def fromResults(basename: String): Payoffs = {
-    val shardCount = loadProperties(basename).getProperty("shards.count").toInt
+    val shardCount = Features.get(basename).shardCount
     val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
-    val globalResults = Load.globalResultDocumentsAt(basename)
+    val baseResults = Features.get(basename).baseResults
     val bucketGlobalResults = Load.bucketizedGlobalResultsAt(basename)
     new Payoffs(
-      for ((globalResultsForQuery, bucketizedGlobalResultsForQuery) <- globalResults zip bucketGlobalResults) yield
+      for ((baseResultsForQuery, bucketizedGlobalResultsForQuery) <- baseResults zip bucketGlobalResults) yield
         for (bucketizedGlobalResultsForShard <- bucketizedGlobalResultsForQuery) yield
           for (bucketizedGlobalResultsForBucket <- bucketizedGlobalResultsForShard) yield
-            bucketizedGlobalResultsForBucket.count(globalResultsForQuery.contains(_)).toDouble
+            bucketizedGlobalResultsForBucket.count(baseResultsForQuery.contains(_)).toDouble
     )
   }
 
   def fromRegressionModel(basename: String, model: RandomForestRegressionModel): Payoffs = {
-    val shardCount = loadProperties(basename).getProperty("shards.count").toInt
-    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
-    val queryCount = Load.queriesAt(basename).size
 
-    val lengths = Load.queryLengthsAt(basename)
-    val redde = Load.reddeScoresAt(basename)
-    val shrkc = Load.shrkcScoresAt(basename)
+    val features = Features.get(basename)
+
+    val shardCount = features.shardCount
+    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
+    val queryCount = features.queries.length
+
+    val lengths = features.queryLengths
+    val redde = features.reddeScores
+    val shrkc = features.shrkcScores
 
     val data = for (((queryLength, queryId), (reddeScores, shrkcScores)) <- lengths.zipWithIndex zip (redde zip shrkc);
                     ((shardReddeScore, shardShrkcScore), shardId) <- reddeScores.zip(shrkcScores).zipWithIndex;

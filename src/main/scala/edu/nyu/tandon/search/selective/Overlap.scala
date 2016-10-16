@@ -3,6 +3,7 @@ package edu.nyu.tandon.search.selective
 import java.io.{FileWriter, Writer}
 
 import com.typesafe.scalalogging.LazyLogging
+import edu.nyu.tandon.search.selective.data.features.Features
 import scopt.OptionParser
 
 import scalax.io.Resource
@@ -44,7 +45,7 @@ object Overlap extends LazyLogging {
 
     val parser = new OptionParser[Config](CommandName) {
 
-      opt[String]('n', "basename")
+      arg[String]("<basename>")
         .action((x, c) => c.copy(basename = x))
         .text("the prefix of the files")
         .required()
@@ -57,7 +58,7 @@ object Overlap extends LazyLogging {
         logger.info(s"Calculating overlap for ${config.basename}")
 
         val input = Load.selectedDocumentsAt(config.basename)
-        val reference = Load.globalResultDocumentsAt(config.basename)
+        val reference = Features.get(base(config.basename)).baseResults
 
         val overlaps = calcOverlaps(input, reference)
 

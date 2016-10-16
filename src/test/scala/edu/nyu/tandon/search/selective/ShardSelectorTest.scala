@@ -73,37 +73,23 @@ class ShardSelectorTest extends BaseFunSuite {
       // then
       assert(l === List(
         List(0, 3, 2),
-        List(2, 0, 0)
+        List(3, 0, 2)
       ))
     }
   }
 
   test("main: with scores") {
     // given
-    val tmpDir = createTemporaryCopyOfResources(regex = ".*results.*|.*scores|.*properties|.*queries|.*payoff|.*cost")
+    val tmpDir = createTemporaryCopyOfResources(regex = ".*sizes|.*results.*|.*scores|.*properties|.*queries|.*payoff|.*cost")
 
     // when
     ShardSelector.main(Array(
-      "--basename", s"$tmpDir/test",
+      s"$tmpDir/test",
       "--budget", "5"
     ))
 
     // then
     compareFilesBetweenDirectories(Seq("test$[5.0].selection", "test$[5.0].selected.docs", "test$[5.0].selected.scores"), resourcesPath, tmpDir.toString)
-  }
-
-  test("main: without scores") {
-    // given
-    val tmpDir = createTemporaryCopyOfResources(regex = ".*results\\.global|.*results\\.local|.*properties|.*queries|.*payoff|.*cost")
-
-    // when
-    ShardSelector.main(Array(
-      "--basename", s"$tmpDir/test",
-      "--budget", "5"
-    ))
-
-    // then
-    compareFilesBetweenDirectories(Seq("test$[5.0].selection"), resourcesPath, tmpDir.toString)
   }
 
 }

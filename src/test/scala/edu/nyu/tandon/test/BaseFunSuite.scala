@@ -3,7 +3,7 @@ package edu.nyu.tandon.test
 import java.nio.file.{Files, Path, Paths}
 
 import org.apache.commons.io.FileUtils
-import org.apache.commons.io.filefilter.RegexFileFilter
+import org.apache.commons.io.filefilter.{DirectoryFileFilter, OrFileFilter, RegexFileFilter}
 import org.scalatest.FunSuite
 import org.scalatest.Matchers._
 
@@ -25,7 +25,8 @@ class BaseFunSuite extends FunSuite {
 
   def createTemporaryCopyOfResources(regex: String): Path = {
     val tmpDir = Files.createTempDirectory(null)
-    FileUtils.copyDirectory(Paths.get(getClass.getResource("/").getPath).toFile, tmpDir.toFile, new RegexFileFilter(regex))
+    FileUtils.copyDirectory(Paths.get(getClass.getResource("/").getPath).toFile, tmpDir.toFile,
+      new OrFileFilter(new RegexFileFilter(regex), DirectoryFileFilter.INSTANCE))
     tmpDir
   }
 

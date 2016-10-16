@@ -1,17 +1,17 @@
 package edu.nyu.tandon.search.selective.data.results
 
 import java.io.FileWriter
-import java.nio.file.{Files, Paths}
 
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective._
+import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.data.results.FlatResults.{closeWriters, writeLine, writers}
-import edu.nyu.tandon.{base => _, _}
+import edu.nyu.tandon._
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class FlatResults(val iterator: Iterator[ResultLine], val hasScores: Boolean) extends Iterator[ResultLine] with LazyLogging {
+class FlatResults(val iterator: Iterator[ResultLine]) extends Iterator[ResultLine] with LazyLogging {
 
   override def hasNext: Boolean = iterator.hasNext
   override def next(): ResultLine = iterator.next()
@@ -19,17 +19,16 @@ class FlatResults(val iterator: Iterator[ResultLine], val hasScores: Boolean) ex
   def bucketize(bucketSize: Long, bucketCount: Int): GroupedResults =
     new GroupedResults(
       iterator.map(_.groupByBuckets(bucketSize, bucketCount)),
-      bucketCount,
-      hasScores
+      bucketCount
     )
 
   def store(basename: String): Unit = {
 
     logger.debug(s"Storing results to $basename")
 
-    val (qw, lw, gw, sw) = writers(basename, hasScores)
-    for (resultLine <- iterator) writeLine(qw, lw, gw, sw, resultLine)
-    closeWriters(qw, lw, gw, sw)
+    val (lw, gw, sw) = writers(basename)
+    for (resultLine <- iterator) writeLine(lw, gw, sw, resultLine)
+    closeWriters(lw, gw, sw)
 
   }
 
@@ -37,54 +36,41 @@ class FlatResults(val iterator: Iterator[ResultLine], val hasScores: Boolean) ex
 
 object FlatResults extends LazyLogging {
 
-  def writers(basename: String, hasScores: Boolean): (FileWriter, FileWriter, FileWriter, Option[FileWriter]) = (
-    new FileWriter(Path.toQueries(basename)),
+  def writers(basename: String): (FileWriter, FileWriter, FileWriter) = (
     new FileWriter(Path.toLocalResults(basename)),
     new FileWriter(Path.toGlobalResults(basename)),
-    if (hasScores) Some(new FileWriter(Path.toScores(basename))) else None
+    new FileWriter(Path.toScores(basename))
   )
 
-  def closeWriters(qw: FileWriter, lw: FileWriter, gw: FileWriter, sw: Option[FileWriter]) = {
-    qw.close()
+  def closeWriters(lw: FileWriter, gw: FileWriter, sw: FileWriter) = {
     lw.close()
     gw.close()
-    sw match {
-      case Some(w) => w.close()
-      case None =>
-    }
+    sw.close()
   }
 
-  def writeLine(qw: FileWriter, lw: FileWriter, gw: FileWriter, sw: Option[FileWriter], resultLine: ResultLine) = {
-    val (q, l, g, s) = resultLine.toStringTuple
-    logger.trace(s"Writing result line ($q, $l, $g, $s)")
-    qw.append(s"$q\n")
-    lw.append(s"$l\n")
-    gw.append(s"$g\n")
-    sw match {
-      case Some(w) => w.append(s"${s.get}\n")
-      case None =>
-    }
+  def writeLine(lw: FileWriter, gw: FileWriter, sw: FileWriter, resultLine: ResultLine) = {
+//    logger.trace(s"Writing result line ($q, $l, $g, $s)")
+    val (local, global, scores) = resultLine.map((r) => (r.localDocumentId, r.globalDocumentId, r.score)).unzip3
+    lw.append(s"${local.mkString(" ")}\n")
+    gw.append(s"${global.mkString(" ")}\n")
+    sw.append(s"${scores.mkString(" ")}\n")
   }
 
   def fromBasename(basename: String): FlatResults = {
 
-    val queries = Load.queriesAt(base(basename))
     val localDocs = lines(Path.toLocalResults(basename))
     val globalDocs = lines(Path.toGlobalResults(basename))
 
-    Files.exists(Paths.get(Path.toScores(basename))) match {
-      case true =>
-        val scores = lines(Path.toScores(basename))
-        new FlatResults(((queries zip localDocs) zip (globalDocs zip scores)).map {
-          case ((q, l), (g, s)) =>
-            logger.trace(s"Reading result line ($q, $l, $g, $s)")
-            ResultLine.fromString(query = q, localDocumentIds = l, globalDocumentIds = g, scores = s)
-        }, true)
-      case false =>
-        new FlatResults(((queries zip localDocs) zip globalDocs).map {
-          case ((q, l), g) => ResultLine.fromString(query = q, localDocumentIds = l, globalDocumentIds = g)
-        }, false)
-    }
+    val scores = lines(Path.toScores(basename))
+    new FlatResults((localDocs zip (globalDocs zip scores)).map {
+      case (l, (g, s)) =>
+        logger.trace(s"Reading result line ($l, $g, $s)")
+        ResultLine.fromString(localDocumentIds = l, globalDocumentIds = g, scores = s)
+    })
+  }
+
+  def fromFeatures(features: Features, shardId: Int, k: Int): FlatResults = {
+    new FlatResults(features.shardResults(shardId).map((l) => ResultLine(l.take(k))))
   }
 
 }

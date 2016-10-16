@@ -11,7 +11,7 @@ class ShardQueueTest extends FunSuite {
 
   test("queue") {
     // given
-    val sq = ShardQueue.maxPayoffQueue(QueryData("x", Seq(
+    val sq = ShardQueue.maxPayoffQueue(QueryData(Seq(
       List(Bucket(0, 9, 9), Bucket(0, 5, 5), Bucket(0, 1.0, 1.0)),
       List(Bucket(1, 8, 8), Bucket(1, 2, 2))
     )))

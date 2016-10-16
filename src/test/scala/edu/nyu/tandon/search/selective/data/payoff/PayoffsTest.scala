@@ -35,7 +35,7 @@ class PayoffsTest extends BaseFunSuite {
   }
 
   test("fromPayoffs/store") {
-    val tempDir = createTemporaryCopyOfResources(".*properties")
+    val tempDir = createTemporaryCopyOfResources(".*sizes|.*properties")
     Payoffs.fromPayoffs(s"$resourcesPath/test").store(s"${tempDir.toString}/test")
     compareFilesBetweenDirectories(for (s <- 0 until 3; b <- 0 until 3) yield s"test#$s#$b.payoff",
       tempDir.toString, resourcesPath)
