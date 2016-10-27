@@ -19,7 +19,7 @@ import scalax.io.Resource
   */
 object TrainCosts {
 
-  val CommandName = "train-payoffs"
+  val CommandName = "train-costs"
 
   val FeaturesColumn = "features"
   val LabelColumn = "label"
