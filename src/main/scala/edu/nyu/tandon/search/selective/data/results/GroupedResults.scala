@@ -17,7 +17,6 @@ class GroupedResults(val iterator: Iterator[Seq[ResultLine]], val groups: Int)
       yield FlatResults.writers(s"$basename#$s")
 
     for ((resultLinesForQuery, i) <- iterator.zipWithIndex) {
-      logger.info(s"Processing query $i")
       for ((resultLine, (lw, gw, sw)) <- resultLinesForQuery zip writers)
         FlatResults.writeLine(lw, gw, sw, resultLine)
     }

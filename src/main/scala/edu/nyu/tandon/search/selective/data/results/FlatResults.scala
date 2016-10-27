@@ -49,7 +49,6 @@ object FlatResults extends LazyLogging {
   }
 
   def writeLine(lw: FileWriter, gw: FileWriter, sw: FileWriter, resultLine: ResultLine) = {
-//    logger.trace(s"Writing result line ($q, $l, $g, $s)")
     val (local, global, scores) = resultLine.map((r) => (r.localDocumentId, r.globalDocumentId, r.score)).unzip3
     lw.append(s"${local.mkString(" ")}\n")
     gw.append(s"${global.mkString(" ")}\n")

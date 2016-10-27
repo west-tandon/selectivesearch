@@ -1,42 +1,55 @@
 package edu.nyu.tandon.search.selective.learn
 
-import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.data.features.Features
-import edu.nyu.tandon.search.selective.data.payoff.Payoffs
+import edu.nyu.tandon.search.selective.{Path, Spark}
+import edu.nyu.tandon.utils.TupleIterators._
+import edu.nyu.tandon.utils.TupleIterables._
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.RandomForestRegressor
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.SaveMode._
+import org.apache.spark.sql._
 import scopt.OptionParser
 
+import scala.language.implicitConversions
 import scalax.io.Resource
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-object LearnPayoffs {
+object TrainCosts {
 
   val CommandName = "train-payoffs"
 
   val FeaturesColumn = "features"
   val LabelColumn = "label"
-  val QueryColumn = "query"
   val ShardColumn = "shard"
-  val BucketColumn = "bucket"
+  val QueryColumn = "query"
 
   def trainingDataFromBasename(basename: String): DataFrame = {
+
     val features = Features.get(basename)
-    val lengths = features.queryLengths
-    val redde = features.reddeScores
-    val shrkc = features.shrkcScores
-    val labels = Payoffs.fromPayoffs(basename)
-    val data = for ((((queryLength, reddeScores), shrkcScores), payoffs) <- lengths.zip(redde).zip(shrkc).zip(labels);
-         ((shardReddeScore, shardShrkcScore), shardPayoffs) <- reddeScores.zip(shrkcScores).zip(payoffs);
-         (payoff, bucket) <- shardPayoffs.zipWithIndex)
-      yield (Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble), payoff)
+    val featureIterator = features.queryLengths
+      .zip(features.maxListLen1)
+      .flatZip(features.maxListLen2)
+      .flatZip(features.minListLen1)
+      .flatZip(features.minListLen2)
+      .flatZip(features.sumListLen)
+      .flatZip(features.costs)
+
+    val data = for ((queryLength, allMaxLL1, allMaxLL2, allMinLL1, allMinLL2, allSumLen, allCosts) <- featureIterator) yield {
+      val shardFeatureIterator = allMaxLL1
+        .zip(allMaxLL2)
+        .flatZip(allMinLL1)
+        .flatZip(allMinLL2)
+        .flatZip(allSumLen)
+        .flatZip(allCosts)
+      for ((maxLL1, maxLL2, minLL1, minLL2, sumLen, cost) <- shardFeatureIterator)
+        yield (Vectors.dense(queryLength, maxLL1, maxLL2, minLL1, minLL2, sumLen), cost)
+    }
+
     Spark.session
-      .createDataFrame(data.toSeq)
+      .createDataFrame(data.flatten.toSeq)
       .withColumnRenamed("_1", FeaturesColumn)
       .withColumnRenamed("_2", LabelColumn)
   }
@@ -64,10 +77,10 @@ object LearnPayoffs {
 
         val regressor = new RandomForestRegressor()
         val model = regressor.fit(trainingData)
-        model.write.overwrite().save(Path.toPayoffModel(config.basename))
+        model.write.overwrite().save(Path.toCostModel(config.basename))
         val testPredictions = model.transform(testData)
         val eval = new RegressionEvaluator().evaluate(testPredictions)
-        Resource.fromFile(Path.toPayoffModelEval(config.basename)).write(s"$eval")
+        Resource.fromFile(Path.toCostModelEval(config.basename)).write(s"$eval")
 
       case None =>
     }

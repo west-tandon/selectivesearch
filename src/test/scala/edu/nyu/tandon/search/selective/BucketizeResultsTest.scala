@@ -64,10 +64,10 @@ class BucketizeResultsTest extends BaseFunSuite {
     }
   }
 
-  test("main: shard") {
+  test("main: shard with costs") {
     new FilesWithScores {
       // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test\\.sizes|test#.\\.results.*|.*properties|.*queries")
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.cost|test\\.sizes|test#.\\.results.*|.*properties|.*queries")
 
       // when
       BucketizeResults.main(Array(s"$tmpDir/test#0"))
@@ -79,13 +79,41 @@ class BucketizeResultsTest extends BaseFunSuite {
     }
   }
 
-  test("main: all") {
+  test("main: shard without costs") {
+    new FilesWithScores {
+      // given
+      val tmpDir = createTemporaryCopyOfResources(regex = "test\\.sizes|test#.\\.results.*|.*properties|.*queries")
+
+      // when
+      BucketizeResults.main(Array("--cost=false", s"$tmpDir/test#0"))
+
+      // then
+      compareFilesBetweenDirectories(outputFileNames.head, getClass.getResource("/").getPath, tmpDir.toString)
+      for (s <- outputFileNames.drop(1))
+        for (f <- s) Files.exists(Paths.get(s"${tmpDir.toString}/$f")) shouldBe false
+    }
+  }
+
+  test("main: all with costs") {
+    new FilesWithScores {
+      // given
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.cost|test\\.sizes|test#.\\.results.*|test#.\\.scores|.*properties|.*queries")
+
+      // when
+      BucketizeResults.main(Array(s"$tmpDir/test"))
+
+      // then
+      compareFilesBetweenDirectories(outputFileNames.flatten, getClass.getResource("/").getPath, tmpDir.toString)
+    }
+  }
+
+  test("main: all without costs") {
     new FilesWithScores {
       // given
       val tmpDir = createTemporaryCopyOfResources(regex = "test\\.sizes|test#.\\.results.*|test#.\\.scores|.*properties|.*queries")
 
       // when
-      BucketizeResults.main(Array(s"$tmpDir/test"))
+      BucketizeResults.main(Array("--cost=false", s"$tmpDir/test"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.flatten, getClass.getResource("/").getPath, tmpDir.toString)

@@ -17,10 +17,26 @@ class Features(basename: String) {
   def shardCount: Int = shardSizes.length
   def shardSize(id: Int): Long = shardSizes(id)
   def shardSizes: IndexedSeq[Long] = lazyShardSizes
+
   def reddeScores: Iterator[Seq[Double]] =
     ZippedIterator(for (s <- 0 until shardCount) yield lines(s"$basename#$s.redde")(_.toDouble)).strict
   def shrkcScores: Iterator[Seq[Double]] =
     ZippedIterator(for (s <- 0 until shardCount) yield lines(s"$basename#$s.shrkc")(_.toDouble)).strict
+
+  def costs(shardId: Int): Iterator[Double] = lines(s"$basename#$shardId.cost")(_.toDouble)
+  def costs: Iterator[Seq[Double]] =
+    ZippedIterator(for (s <- 0 until shardCount) yield lines(s"$basename#$s.cost")(_.toDouble)).strict
+
+  def maxListLen1: Iterator[Seq[Double]] =
+    ZippedIterator(for (s <- 0 until shardCount) yield lines(s"$basename#$s.maxlist1")(_.toDouble)).strict
+  def maxListLen2: Iterator[Seq[Double]] =
+    ZippedIterator(for (s <- 0 until shardCount) yield lines(s"$basename#$s.maxlist2")(_.toDouble)).strict
+  def minListLen1: Iterator[Seq[Double]] =
+    ZippedIterator(for (s <- 0 until shardCount) yield lines(s"$basename#$s.minlist1")(_.toDouble)).strict
+  def minListLen2: Iterator[Seq[Double]] =
+    ZippedIterator(for (s <- 0 until shardCount) yield lines(s"$basename#$s.minlist2")(_.toDouble)).strict
+  def sumListLen: Iterator[Seq[Double]] =
+    ZippedIterator(for (s <- 0 until shardCount) yield lines(s"$basename#$s.sumlist")(_.toDouble)).strict
 
   /* Queries */
   def queries: Iterator[String] = lines(s"$basename.queries")

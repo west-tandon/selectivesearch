@@ -58,6 +58,7 @@ object Load {
   def selectedScoresAt(basename: String): Iterator[Seq[Double]] = queryLevelSequence(basename, s"$SelectedSuffix$ScoresSuffix", _.toDouble)
 
   def payoffsAt(basename: String): Iterator[Seq[Seq[Double]]] = bucketLevelValue(basename, PayoffSuffix, _.toDouble)
+  def costsAt(basename: String): Iterator[Seq[Seq[Double]]] = bucketLevelValue(basename, CostSuffix, _.toDouble)
   def bucketizedGlobalResultsAt(basename: String): Iterator[Seq[Seq[Seq[Long]]]] = bucketLevelSequence(basename, s"$ResultsSuffix$GlobalSuffix", _.toLong)
 
 }

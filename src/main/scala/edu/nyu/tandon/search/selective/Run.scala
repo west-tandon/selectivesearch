@@ -1,6 +1,6 @@
 package edu.nyu.tandon.search.selective
 
-import edu.nyu.tandon.search.selective.learn.{LearnPayoffs, PredictPayoffs}
+import edu.nyu.tandon.search.selective.learn.{LearnPayoffs, PredictCosts, PredictPayoffs, TrainCosts}
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -13,7 +13,9 @@ object Run {
     (ResolvePayoffs.CommandName, ResolvePayoffs.main),
     (ShardSelector.CommandName, ShardSelector.main),
     (LearnPayoffs.CommandName, LearnPayoffs.main),
+    (TrainCosts.CommandName, TrainCosts.main),
     (PredictPayoffs.CommandName, PredictPayoffs.main),
+    (PredictCosts.CommandName, PredictCosts.main),
     (Overlap.CommandName, Overlap.main)
   )
 

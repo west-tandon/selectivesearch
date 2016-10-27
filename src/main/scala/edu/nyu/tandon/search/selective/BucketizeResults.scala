@@ -1,9 +1,11 @@
 package edu.nyu.tandon.search.selective
 
+import java.io.FileWriter
+
 import com.typesafe.scalalogging.LazyLogging
-import edu.nyu.tandon.loadProperties
+import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective.data.features.Features
-import edu.nyu.tandon.search.selective.data.results.{FlatResults, _}
+import edu.nyu.tandon.search.selective.data.results.FlatResults
 import scopt.OptionParser
 
 /**
@@ -22,7 +24,8 @@ object BucketizeResults extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
 
-    case class Config(basename: String = null)
+    case class Config(basename: String = null,
+                      bucketizeCosts: Boolean = true)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -30,6 +33,10 @@ object BucketizeResults extends LazyLogging {
         .action((x, c) => c.copy(basename = x))
         .text("the prefix of the files")
         .required()
+
+      opt[Boolean]('c', "cost")
+        .action((x, c) => c.copy(bucketizeCosts = x))
+        .text("whether to bucketize costs (requires costs among input files)")
 
     }
 
@@ -56,6 +63,8 @@ object BucketizeResults extends LazyLogging {
               .bucketize(bucketSize, bucketCount)
               .store(config.basename)
 
+            if (config.bucketizeCosts) bucketizeCosts(config.basename, features, shardId, bucketCount)
+
           case None =>
 
             val bucketSizes = features.shardSizes.map(
@@ -66,10 +75,13 @@ object BucketizeResults extends LazyLogging {
 
             for ((bucketSize, shardId) <- bucketSizes.zipWithIndex) {
               logger.info(s"Bucketizing shard $shardId with bucket size $bucketSize")
+
               FlatResults
                 .fromFeatures(features, shardId, k)
                 .bucketize(bucketSize, bucketCount)
                 .store(s"${config.basename}#$shardId")
+
+              if (config.bucketizeCosts) bucketizeCosts(s"${config.basename}#$shardId", features, shardId, bucketCount)
             }
 
         }
@@ -77,6 +89,15 @@ object BucketizeResults extends LazyLogging {
       case None =>
     }
 
+  }
+
+  def bucketizeCosts(basename: String, features: Features, shardId: Int, bucketCount: Int): Unit = {
+    val writers = for (b <- 0 until bucketCount) yield new FileWriter(basename)
+    for (c <- features.costs(shardId)) {
+      val unitCost = c.toDouble / bucketCount.toDouble;
+      for (w <- writers) w.append(s"$unitCost\n")
+    }
+    for (w <- writers) w.close()
   }
 
 }
