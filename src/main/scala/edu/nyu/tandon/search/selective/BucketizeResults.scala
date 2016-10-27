@@ -81,7 +81,7 @@ object BucketizeResults extends LazyLogging {
                 .bucketize(bucketSize, bucketCount)
                 .store(s"${config.basename}#$shardId")
 
-              if (config.bucketizeCosts) bucketizeCosts(s"${config.basename}#$shardId", features, shardId, bucketCount)
+              if (config.bucketizeCosts) bucketizeCosts(config.basename, features, shardId, bucketCount)
             }
 
         }
@@ -92,7 +92,7 @@ object BucketizeResults extends LazyLogging {
   }
 
   def bucketizeCosts(basename: String, features: Features, shardId: Int, bucketCount: Int): Unit = {
-    val writers = for (b <- 0 until bucketCount) yield new FileWriter(basename)
+    val writers = for (b <- 0 until bucketCount) yield new FileWriter(Path.toCosts(basename, shardId, b))
     for (c <- features.costs(shardId)) {
       val unitCost = c.toDouble / bucketCount.toDouble;
       for (w <- writers) w.append(s"$unitCost\n")
