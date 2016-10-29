@@ -28,6 +28,8 @@ class Features(val basename: String) {
     ZippedIterator(for (s <- 0 until shardCount) yield Lines.fromFile(s"$basename#$s.cost").of[Double]).strict
 
   def times(shardId: Int): Iterator[Double] = Lines.fromFile(s"$basename#$shardId.time").of[Double]
+  def times: Iterator[Seq[Double]] =
+    ZippedIterator(for (s <- 0 until shardCount) yield Lines.fromFile(s"$basename#$s.time").of[Double]).strict
 
   def maxListLen1: Iterator[Seq[Double]] =
     ZippedIterator(for (s <- 0 until shardCount) yield Lines.fromFile(s"$basename#$s.maxlist1").of[Double]).strict

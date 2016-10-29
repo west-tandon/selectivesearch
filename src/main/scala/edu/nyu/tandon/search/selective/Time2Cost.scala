@@ -41,8 +41,12 @@ object Time2Cost extends LazyLogging {
           case None => features.avgTime
         }
 
-        for (shard <- 0 until features.shardCount)
+        logger.info(s"Converting time to cost at ${features.basename}")
+
+        for (shard <- 0 until features.shardCount) {
+          logger.info(s"Converting shard $shard")
           features.times(shard).map(_ / unitCost).write(Path.toCosts(features.basename, shard))
+        }
 
       case None =>
     }
