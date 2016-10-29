@@ -1,6 +1,5 @@
 package edu.nyu.tandon.search.selective.data
 
-import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.utils.ZippedIterator
 
@@ -17,7 +16,7 @@ package object results {
   }
 
   def resultsByBucketsFromBasename(basename: String): GroupedResults = {
-    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
+    val bucketCount = Properties.get(basename).bucketCount
     val buckets = for (b <- 0 until bucketCount) yield FlatResults.fromBasename(s"$basename#$b")
     new GroupedResults(ZippedIterator(buckets).strict, bucketCount)
   }

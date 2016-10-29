@@ -1,7 +1,7 @@
 package edu.nyu.tandon.search.selective.data.results
 
 import com.typesafe.scalalogging.LazyLogging
-import edu.nyu.tandon._
+import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 
 /**
@@ -14,8 +14,12 @@ class GroupedGroupedResults(val iterator: Iterator[Seq[Seq[ResultLine]]])
   override def next(): Seq[Seq[ResultLine]] = iterator.next()
 
   def store(basename: String): Unit = {
-    val shardCount = Features.get(basename).shardCount
-    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
+
+    val properties = Properties.get(basename)
+    val features = Features.get(properties)
+
+    val shardCount = features.shardCount
+    val bucketCount = properties.bucketCount
 
     val writers =
       for (s <- 0 until shardCount) yield

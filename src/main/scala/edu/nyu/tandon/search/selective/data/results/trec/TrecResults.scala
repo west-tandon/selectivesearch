@@ -6,6 +6,7 @@ import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.data.features.Features
+import edu.nyu.tandon.utils.Lines
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -58,7 +59,7 @@ object TrecResults extends LazyLogging {
 
   def fromTrecFile(trecFile: String): TrecResults =
     new TrecResults(
-      lines(trecFile)
+      Lines.fromFile(trecFile)
         .map (line => {
           val s = line.split(TrecSplitter)
           new TrecLine(

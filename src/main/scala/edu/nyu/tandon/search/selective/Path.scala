@@ -48,6 +48,7 @@ object Path {
   def toOverlap(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapSuffix")
 
   /* Shard level */
+  def toCosts(basename: String, shardId: Int): String = toAny(basename, shardId, CostSuffix)
 
   /* Bucket level */
   def toCosts(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, CostSuffix)

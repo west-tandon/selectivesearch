@@ -16,7 +16,8 @@ object Run {
     (TrainCosts.CommandName, TrainCosts.main),
     (PredictPayoffs.CommandName, PredictPayoffs.main),
     (PredictCosts.CommandName, PredictCosts.main),
-    (Overlap.CommandName, Overlap.main)
+    (Overlap.CommandName, Overlap.main),
+    (Time2Cost.CommandName, Time2Cost.main)
   )
 
   def printUsage(): Unit = {
@@ -34,7 +35,6 @@ object Run {
           printUsage()
         case Some((w, program)) => program(args.drop(1))
       }
-
 
   }
 

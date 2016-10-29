@@ -3,12 +3,12 @@ package edu.nyu.tandon.search.selective.learn
 import java.io.FileWriter
 import java.nio.file.Files
 
-import edu.nyu.tandon._
-import edu.nyu.tandon.search.selective.{Path, Spark}
+import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.learn.TrainCosts.{FeaturesColumn, QueryColumn, ShardColumn}
-import edu.nyu.tandon.utils.TupleIterators._
+import edu.nyu.tandon.search.selective.{Path, Spark}
 import edu.nyu.tandon.utils.TupleIterables._
+import edu.nyu.tandon.utils.TupleIterators._
 import org.apache.commons.io.FileUtils
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.regression.RandomForestRegressionModel
@@ -26,10 +26,11 @@ object PredictCosts {
   val PredictedLabelColumn = "prediction"
 
   def costsFromRegressionModel(basename: String, model: RandomForestRegressionModel): Iterator[Seq[Seq[Double]]] = {
-    val features = Features.get(basename)
+    val properties = Properties.get(basename)
+    val features = Features.get(properties)
 
     val shardCount = features.shardCount
-    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
+    val bucketCount = properties.bucketCount
     val queryCount = features.queries.length
 
     val featureIterator = features.queryLengths
@@ -79,8 +80,10 @@ object PredictCosts {
   }
 
   def storeCosts(basename: String, costs: Iterator[Seq[Seq[Double]]]): Unit = {
-    val shardCount = Features.get(basename).shardCount
-    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
+    val properties = Properties.get(basename)
+    val features = Features.get(properties)
+    val shardCount = features.shardCount
+    val bucketCount = properties.bucketCount
 
     val writers =
       for (s <- 0 until shardCount) yield

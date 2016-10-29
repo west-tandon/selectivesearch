@@ -4,6 +4,7 @@ import java.io.FileWriter
 
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon._
+import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.data.results.FlatResults
 import scopt.OptionParser
@@ -45,10 +46,10 @@ object BucketizeResults extends LazyLogging {
 
         val (basename: String, shard: Option[Int]) = parseBasename(config.basename)
 
-        val properties = loadProperties(basename)
-        val bucketCount = properties.getProperty("buckets.count").toInt
-        val k = properties.getProperty("k").toInt
-        val features = Features.get(basename)
+        val properties = Properties.get(basename)
+        val bucketCount = properties.bucketCount
+        val k = properties.k
+        val features = Features.get(properties)
         val shardCount = features.shardCount
 
         shard match {
@@ -94,7 +95,7 @@ object BucketizeResults extends LazyLogging {
   def bucketizeCosts(basename: String, features: Features, shardId: Int, bucketCount: Int): Unit = {
     val writers = for (b <- 0 until bucketCount) yield new FileWriter(Path.toCosts(basename, shardId, b))
     for (c <- features.costs(shardId)) {
-      val unitCost = c.toDouble / bucketCount.toDouble;
+      val unitCost = c.toDouble / bucketCount.toDouble
       for (w <- writers) w.append(s"$unitCost\n")
     }
     for (w <- writers) w.close()

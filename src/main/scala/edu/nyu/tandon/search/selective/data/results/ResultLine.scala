@@ -1,7 +1,5 @@
 package edu.nyu.tandon.search.selective.data.results
 
-import edu.nyu.tandon._
-
 /**
   * @author michal.siedlaczek@nyu.edu
   */
@@ -16,16 +14,13 @@ case class ResultLine(results: Seq[Result]) extends Iterable[Result] {
     for (i <- 0 until bucketCount) yield new ResultLine(m(i))
   }
 
-//  def toStringTuple: (String, String, String) =
-//    results.map((r) => (r.localDocumentId, r.globalDocumentId, r.score))
-
 }
 
 object ResultLine {
 
-  def fromString(localDocumentIds: String, globalDocumentIds: String, scores: String): ResultLine =
+  def get(localDocumentIds: Seq[Long], globalDocumentIds: Seq[Long], scores: Seq[Double]): ResultLine =
     new ResultLine(
-      for (((localId, globalId), score) <- lineToLongs(localDocumentIds).zip(lineToLongs(globalDocumentIds)).zip(lineToDoubles(scores)))
+      for (((localId, globalId), score) <- localDocumentIds.zip(globalDocumentIds).zip(scores))
         yield Result(localId, globalId, score)
     )
 
