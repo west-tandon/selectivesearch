@@ -10,7 +10,8 @@ class Selection2TimeTest extends BaseFunSuite {
   trait Copy {
     val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.time|.*sizes|.*properties|.*selection")
     val toCompare = Seq(
-      s"test$BudgetIndicator[5.0].selection.time"
+      s"test$BudgetIndicator[5.0].selection.time",
+      s"test$BudgetIndicator[5.0].selection.time.avg"
     )
   }
 
