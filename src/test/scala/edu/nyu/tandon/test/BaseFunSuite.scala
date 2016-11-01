@@ -2,12 +2,11 @@ package edu.nyu.tandon.test
 
 import java.nio.file.{Files, Path, Paths}
 
+import edu.nyu.tandon.utils.Lines
 import org.apache.commons.io.FileUtils
 import org.apache.commons.io.filefilter.{DirectoryFileFilter, OrFileFilter, RegexFileFilter}
 import org.scalatest.FunSuite
 import org.scalatest.Matchers._
-
-import scala.io.Source
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -18,7 +17,7 @@ class BaseFunSuite extends FunSuite {
     for (file <- fileNames) {
       val f1 = s"$dir1/$file"
       val f2 = s"$dir2/$file"
-      Source.fromFile(f1).getLines().toSeq should contain theSameElementsInOrderAs Source.fromFile(f2).getLines().toSeq
+      Lines.fromFile(f1).toSeq should contain theSameElementsInOrderAs Lines.fromFile(f2).toSeq
     }
 
   def createTemporaryDir(): Path = Files.createTempDirectory(null)

@@ -1,8 +1,5 @@
 package edu.nyu.tandon.search.selective
 
-import java.io.File
-import java.nio.file.Paths
-
 /**
   * @author michal.siedlaczek@nyu.edu
   */
@@ -25,7 +22,8 @@ object Path {
   val ReDDESuffix = ".redde"
   val ShRkCSuffix = ".shrkc"
   val LabelSuffix = ".label"
-  val ModelSuffix = ".model"
+  val PayoffModelSuffix = ".payoff-model"
+  val CostModelSuffix = ".cost-model"
   val EvalSuffix = ".eval"
   val OverlapsSuffix = ".overlaps"
   val OverlapSuffix = ".overlap"
@@ -42,12 +40,15 @@ object Path {
   def toSelectedTrec(basename: String): String = toAny(basename, s"$SelectedSuffix$TrecSuffix")
   def toTrec(basename: String): String = toAny(basename, TrecSuffix)
   def toTrecIds(basename: String): String = toAny(basename, TrecIdSuffix)
-  def toModel(basename: String): String = toAny(basename, ModelSuffix)
-  def toModelEval(basename: String): String = s"${toModel(basename)}$EvalSuffix"
+  def toPayoffModel(basename: String): String = toAny(basename, PayoffModelSuffix)
+  def toPayoffModelEval(basename: String): String = s"${toPayoffModel(basename)}$EvalSuffix"
+  def toCostModel(basename: String): String = toAny(basename, CostModelSuffix)
+  def toCostModelEval(basename: String): String = s"${toCostModel(basename)}$EvalSuffix"
   def toOverlaps(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapsSuffix")
   def toOverlap(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapSuffix")
 
   /* Shard level */
+  def toCosts(basename: String, shardId: Int): String = toAny(basename, shardId, CostSuffix)
 
   /* Bucket level */
   def toCosts(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, CostSuffix)

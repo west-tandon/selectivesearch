@@ -4,8 +4,8 @@ import java.io.FileWriter
 import java.nio.file.Files
 
 import com.typesafe.scalalogging.LazyLogging
-import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
+import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.learn.LearnPayoffs.{BucketColumn, FeaturesColumn, QueryColumn, ShardColumn}
 import edu.nyu.tandon.search.selective.learn.PredictPayoffs.PredictedLabelColumn
@@ -26,8 +26,9 @@ class Payoffs(val payoffs: Iterator[Seq[Seq[Double]]]) extends Iterator[Seq[Seq[
   override def next(): Seq[Seq[Double]] = payoffs.next()
 
   def store(basename: String): Unit = {
-    val shardCount = Features.get(basename).shardCount
-    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
+    val properties = Properties.get(basename)
+    val shardCount = Features.get(properties).shardCount
+    val bucketCount = properties.bucketCount
 
     val writers =
       for (s <- 0 until shardCount) yield
@@ -53,10 +54,13 @@ object Payoffs {
   def fromPayoffs(basename: String): Payoffs = Load.payoffsAt(basename)
 
   def fromResults(basename: String): Payoffs = {
-    val shardCount = Features.get(basename).shardCount
-    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
-    val baseResults = Features.get(basename).baseResults
+
+    val properties = Properties.get(basename)
+    val features = Features.get(properties)
+
+    val baseResults = features.baseResults
     val bucketGlobalResults = Load.bucketizedGlobalResultsAt(basename)
+
     new Payoffs(
       for ((baseResultsForQuery, bucketizedGlobalResultsForQuery) <- baseResults zip bucketGlobalResults) yield
         for (bucketizedGlobalResultsForShard <- bucketizedGlobalResultsForQuery) yield
@@ -67,10 +71,11 @@ object Payoffs {
 
   def fromRegressionModel(basename: String, model: RandomForestRegressionModel): Payoffs = {
 
-    val features = Features.get(basename)
+    val properties = Properties.get(basename)
+    val features = Features.get(properties)
 
+    val bucketCount = properties.bucketCount
     val shardCount = features.shardCount
-    val bucketCount = loadProperties(basename).getProperty("buckets.count").toInt
     val queryCount = features.queries.length
 
     val lengths = features.queryLengths

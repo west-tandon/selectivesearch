@@ -6,7 +6,8 @@ import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.data.results.FlatResults.{closeWriters, writeLine, writers}
-import edu.nyu.tandon._
+import edu.nyu.tandon.utils.Lines
+import edu.nyu.tandon.utils.Lines._
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -49,7 +50,6 @@ object FlatResults extends LazyLogging {
   }
 
   def writeLine(lw: FileWriter, gw: FileWriter, sw: FileWriter, resultLine: ResultLine) = {
-//    logger.trace(s"Writing result line ($q, $l, $g, $s)")
     val (local, global, scores) = resultLine.map((r) => (r.localDocumentId, r.globalDocumentId, r.score)).unzip3
     lw.append(s"${local.mkString(" ")}\n")
     gw.append(s"${global.mkString(" ")}\n")
@@ -58,14 +58,13 @@ object FlatResults extends LazyLogging {
 
   def fromBasename(basename: String): FlatResults = {
 
-    val localDocs = lines(Path.toLocalResults(basename))
-    val globalDocs = lines(Path.toGlobalResults(basename))
+    val localDocs = Lines.fromFile(Path.toLocalResults(basename)).ofSeq[Long]
+    val globalDocs = Lines.fromFile(Path.toGlobalResults(basename)).ofSeq[Long]
+    val scores = Lines.fromFile(Path.toScores(basename)).ofSeq[Double]
 
-    val scores = lines(Path.toScores(basename))
     new FlatResults((localDocs zip (globalDocs zip scores)).map {
       case (l, (g, s)) =>
-        logger.trace(s"Reading result line ($l, $g, $s)")
-        ResultLine.fromString(localDocumentIds = l, globalDocumentIds = g, scores = s)
+        ResultLine.get(localDocumentIds = l, globalDocumentIds = g, scores = s)
     })
   }
 

@@ -1,9 +1,5 @@
 package edu.nyu.tandon.search.selective.data
 
-import java.io.FileInputStream
-import java.util.Properties
-
-import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.data.features.Features
 
@@ -61,10 +57,9 @@ object QueryShardExperiment {
 
   def fromBasename(basename: String): QueryShardExperiment = {
 
-    val properties = new Properties()
-    properties.load(new FileInputStream(s"$basename$PropertiesSuffix"))
-    val shardCount = Features.get(basename).shardCount
-    val bucketCount = properties.getProperty("buckets.count").toInt
+    val properties = Properties.get(basename)
+    val shardCount = Features.get(properties).shardCount
+    val bucketCount = properties.bucketCount
 
     new QueryShardExperiment(
       for (s <- 0 until shardCount) yield

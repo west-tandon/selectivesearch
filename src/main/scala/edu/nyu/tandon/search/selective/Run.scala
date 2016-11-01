@@ -1,6 +1,6 @@
 package edu.nyu.tandon.search.selective
 
-import edu.nyu.tandon.search.selective.learn.{LearnPayoffs, PredictPayoffs}
+import edu.nyu.tandon.search.selective.learn.{LearnPayoffs, PredictCosts, PredictPayoffs, TrainCosts}
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -13,8 +13,12 @@ object Run {
     (ResolvePayoffs.CommandName, ResolvePayoffs.main),
     (ShardSelector.CommandName, ShardSelector.main),
     (LearnPayoffs.CommandName, LearnPayoffs.main),
+    (TrainCosts.CommandName, TrainCosts.main),
     (PredictPayoffs.CommandName, PredictPayoffs.main),
-    (Overlap.CommandName, Overlap.main)
+    (PredictCosts.CommandName, PredictCosts.main),
+    (Overlap.CommandName, Overlap.main),
+    (Time2Cost.CommandName, Time2Cost.main),
+    (Selection2Time.CommandName, Selection2Time.main)
   )
 
   def printUsage(): Unit = {
@@ -32,7 +36,6 @@ object Run {
           printUsage()
         case Some((w, program)) => program(args.drop(1))
       }
-
 
   }
 

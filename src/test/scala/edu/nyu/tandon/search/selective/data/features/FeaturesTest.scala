@@ -86,21 +86,28 @@ class FeaturesTest extends BaseFunSuite {
 
   test("shardResults") {
     new F {
-      new F {
-        val results = f.shardResults.toIndexedSeq
-        results.length shouldBe 2
-        results(0).head should contain theSameElementsInOrderAs Seq(
-          Result(1, 1000, 80.0),
-          Result(2, 2000, 70.0),
-          Result(3, 3000, 60.0),
-          Result(104, 104000, 50.0),
-          Result(105, 105000, 40.0),
-          Result(106, 106000, 30.0),
-          Result(207, 207000, 20.0),
-          Result(208, 208000, 10.0),
-          Result(299, 9999999, 0.99)
-        )
-      }
+      val results = f.shardResults.toIndexedSeq
+      results.length shouldBe 2
+      results(0).head should contain theSameElementsInOrderAs Seq(
+        Result(1, 1000, 80.0),
+        Result(2, 2000, 70.0),
+        Result(3, 3000, 60.0),
+        Result(104, 104000, 50.0),
+        Result(105, 105000, 40.0),
+        Result(106, 106000, 30.0),
+        Result(207, 207000, 20.0),
+        Result(208, 208000, 10.0),
+        Result(299, 9999999, 0.99)
+      )
+    }
+  }
+
+  test("costs") {
+    new F {
+      val costs = f.costs.toIndexedSeq
+      costs.length shouldBe 2
+      costs(0) should contain theSameElementsInOrderAs Seq(3, 3, 3)
+      costs(1) should contain theSameElementsInOrderAs Seq(3, 3, 3)
     }
   }
 
