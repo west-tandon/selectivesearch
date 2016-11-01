@@ -8,7 +8,7 @@ import edu.nyu.tandon.utils.Lines._
 import edu.nyu.tandon.utils.WriteLineIterator._
 import scopt.OptionParser
 
-import scalax.io.Resource
+import scalax.io.StandardOpenOption._
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -47,7 +47,8 @@ object Selection2Time extends LazyLogging {
           }.sum
 
         val (sum, count) = selectionTimes.aggregating.write(s"${config.basename}.selection.time")
-        Resource.fromFile(s"${config.basename}.selection.time.avg").write(String.valueOf(sum / count.toDouble))
+        scalax.file.Path.fromString(s"${config.basename}.selection.time.avg").outputStream(WriteTruncate:_*)
+          .write(String.valueOf(sum / count.toDouble))
 
       case None =>
     }
