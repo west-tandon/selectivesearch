@@ -2,8 +2,8 @@ package edu.nyu.tandon.search.selective.learn
 
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.{Path, Spark}
-import edu.nyu.tandon.utils.TupleIterators._
 import edu.nyu.tandon.utils.TupleIterables._
+import edu.nyu.tandon.utils.TupleIterators._
 import org.apache.spark.ml.evaluation.RegressionEvaluator
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.ml.regression.RandomForestRegressor
@@ -12,7 +12,7 @@ import org.apache.spark.sql._
 import scopt.OptionParser
 
 import scala.language.implicitConversions
-import scalax.io.Resource
+import scalax.io.StandardOpenOption._
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -80,7 +80,8 @@ object TrainCosts {
         model.write.overwrite().save(Path.toCostModel(config.basename))
         val testPredictions = model.transform(testData)
         val eval = new RegressionEvaluator().evaluate(testPredictions)
-        Resource.fromFile(Path.toCostModelEval(config.basename)).write(s"$eval")
+        scalax.file.Path.fromString(Path.toCostModelEval(config.basename)).outputStream(WriteTruncate:_*)
+          .write(s"$eval")
 
       case None =>
     }
