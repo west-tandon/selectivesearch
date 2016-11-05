@@ -12,7 +12,7 @@ qrels=$2
 shift 2
 
 if [ -z "${basename}" ]; then echo "You have to define basename (1)."; exit 1; fi;
-if [ -z "${qrels}" ]; then echo "You have to define basename (2)."; exit 1; fi;
+if [ -z "${qrels}" ]; then echo "You have to define qrels (2)."; exit 1; fi;
 if [ "$#" == "0" ]; then echo "You have to define budget(s) to test."; exit 1; fi
 
 set -x
