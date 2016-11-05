@@ -63,6 +63,8 @@ object PredictCosts {
     val predictions = Spark.session.read.parquet(tmp.toString).sort(QueryColumn, ShardColumn).collect()
     FileUtils.deleteDirectory(tmp.toFile)
 
+    require(predictions.length == queryCount * shardCount, s"expected ${queryCount * shardCount} records, found ${predictions.length}")
+
     (
       for (queryId <- 0 until queryCount) yield
         for (shardId <- 0 until shardCount) yield {
