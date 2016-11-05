@@ -40,18 +40,16 @@ object PredictCosts {
       .flatZip(features.minListLen1)
       .flatZip(features.minListLen2)
       .flatZip(features.sumListLen)
-      .flatZip(features.costs)
 
-    val data = for ((queryId, queryLength, allMaxLL1, allMaxLL2, allMinLL1, allMinLL2, allSumLen, allCosts) <- featureIterator) yield {
+    val data = for ((queryLength, queryId, allMaxLL1, allMaxLL2, allMinLL1, allMinLL2, allSumLen) <- featureIterator) yield {
       val shardFeatureIterator = allMaxLL1
         .zip(allMaxLL2)
         .flatZip(allMinLL1)
         .flatZip(allMinLL2)
         .flatZip(allSumLen)
-        .flatZip(allCosts)
         .flatZipWithIndex
-      for ((maxLL1, maxLL2, minLL1, minLL2, sumLen, cost, shardId) <- shardFeatureIterator)
-        yield (shardId, Vectors.dense(queryLength, maxLL1, maxLL2, minLL1, minLL2, sumLen), cost)
+      for ((maxLL1, maxLL2, minLL1, minLL2, sumLen, shardId) <- shardFeatureIterator)
+        yield (queryId, shardId, Vectors.dense(queryLength, maxLL1, maxLL2, minLL1, minLL2, sumLen))
     }
 
     val df = Spark.session.createDataFrame(data.flatten.toSeq)
@@ -64,6 +62,8 @@ object PredictCosts {
     model.transform(df).write.mode(Overwrite).save(tmp.toString)
     val predictions = Spark.session.read.parquet(tmp.toString).sort(QueryColumn, ShardColumn).collect()
     FileUtils.deleteDirectory(tmp.toFile)
+
+    require(predictions.length == queryCount * shardCount, s"expected ${queryCount * shardCount} records, found ${predictions.length}")
 
     (
       for (queryId <- 0 until queryCount) yield

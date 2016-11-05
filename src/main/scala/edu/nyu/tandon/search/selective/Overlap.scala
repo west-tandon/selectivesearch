@@ -6,7 +6,7 @@ import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.features.Features
 import scopt.OptionParser
 
-import scalax.io.Resource
+import scalax.io.StandardOpenOption._
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -67,7 +67,8 @@ object Overlap extends LazyLogging {
 
         for (((avgOverlap, w), k) <- (avg zip writers) zip OverlapLevels) {
           logger.info(s"Overlap @$k = $avgOverlap")
-          Resource.fromFile(Path.toOverlap(config.basename, k)).write(s"$avgOverlap\n")
+          scalax.file.Path.fromString(Path.toOverlap(config.basename, k)).outputStream(WriteTruncate:_*)
+              .write(s"$avgOverlap\n")
           w.close()
         }
 

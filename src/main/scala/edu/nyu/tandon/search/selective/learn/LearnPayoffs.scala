@@ -11,6 +11,7 @@ import org.apache.spark.sql.SaveMode._
 import scopt.OptionParser
 
 import scalax.io.Resource
+import scalax.io.StandardOpenOption._
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -67,7 +68,8 @@ object LearnPayoffs {
         model.write.overwrite().save(Path.toPayoffModel(config.basename))
         val testPredictions = model.transform(testData)
         val eval = new RegressionEvaluator().evaluate(testPredictions)
-        Resource.fromFile(Path.toPayoffModelEval(config.basename)).write(s"$eval")
+        scalax.file.Path.fromString(Path.toPayoffModelEval(config.basename)).outputStream(WriteTruncate:_*)
+          .write(s"$eval")
 
       case None =>
     }
