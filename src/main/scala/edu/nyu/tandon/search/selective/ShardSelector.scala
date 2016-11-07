@@ -55,11 +55,15 @@ object ShardSelector extends LazyLogging {
 
   def writeSelection(basename: String, selection: Iterable[Seq[Int]]): Unit = {
     val writer = new BufferedWriter(new FileWriter(Path.toSelection(basename)))
+    val shardCountWriter = new BufferedWriter(new FileWriter(Path.toSelectionShardCount(basename)))
     for (q <- selection) {
       writer.append(q.mkString(FieldSeparator))
       writer.newLine()
+      shardCountWriter.append(q.count(_ > 0).toString)
+      shardCountWriter.newLine()
     }
     writer.close()
+    shardCountWriter.close()
   }
 
   def writeSelected(basename: String, selected: Iterable[Seq[Result]]): Unit = {

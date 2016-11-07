@@ -89,7 +89,11 @@ class ShardSelectorTest extends BaseFunSuite {
     ))
 
     // then
-    compareFilesBetweenDirectories(Seq("test$[5.0].selection", "test$[5.0].selected.docs", "test$[5.0].selected.scores"), resourcesPath, tmpDir.toString)
+    compareFilesBetweenDirectories(Seq(
+      "test$[5.0].selection",
+      "test$[5.0].selection.shard-count",
+      "test$[5.0].selected.docs",
+      "test$[5.0].selected.scores"), resourcesPath, tmpDir.toString)
   }
 
 }
