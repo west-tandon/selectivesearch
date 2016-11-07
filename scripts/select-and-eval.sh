@@ -26,6 +26,7 @@ selectivesearch select-shards ${basename} --budget ${budget}
 
 budgetBase="${basename}\$[${budget}]"
 
+selectivesearch selection2time "${budgetBase}"
 selectivesearch overlap "${budgetBase}"
 selectivesearch export-trec "${budgetBase}"
 trec_eval -q "${qrels}" "${budgetBase}.trec" > "${budgetBase}.trec.eval"
