@@ -18,7 +18,8 @@ object Run {
     (PredictCosts.CommandName, PredictCosts.main),
     (Overlap.CommandName, Overlap.main),
     (Time2Cost.CommandName, Time2Cost.main),
-    (Selection2Time.CommandName, Selection2Time.main)
+    (Selection2Time.CommandName, Selection2Time.main),
+    (Penalize.CommandName, Penalize.main)
   )
 
   def printUsage(): Unit = {

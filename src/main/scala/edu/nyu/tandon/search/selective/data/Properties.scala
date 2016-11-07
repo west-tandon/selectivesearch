@@ -3,6 +3,7 @@ package edu.nyu.tandon.search.selective.data
 import java.io.FileInputStream
 
 import edu.nyu.tandon.search.selective._
+import edu.nyu.tandon.search.selective.data.features.Features
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -24,6 +25,7 @@ class Properties(val file: String) {
   lazy val featuresPath: String = getProperty("features")
   lazy val bucketCount: Int = getProperty("buckets.count").toInt
   lazy val k: Int = getProperty("k").toInt
+  lazy val features: Features = Features.get(this)
 
 }
 
