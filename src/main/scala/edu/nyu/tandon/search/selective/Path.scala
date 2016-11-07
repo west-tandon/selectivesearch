@@ -10,6 +10,7 @@ object Path {
   val QueriesSuffix = ".queries"
   val QueryLengthsSuffix = ".lengths"
   val SelectionSuffix = ".selection"
+  val ShardCountSuffix = ".shard-count"
   val SelectedSuffix = ".selected"
   val ResultsSuffix = ".results"
   val DocumentsSuffix = ".docs"
@@ -35,6 +36,7 @@ object Path {
   /* Query level */
   def toQueries(basename: String): String = toAny(basename, QueriesSuffix)
   def toSelection(basename: String): String = toAny(basename, SelectionSuffix)
+  def toSelectionShardCount(basename: String): String = toAny(basename, s"$SelectionSuffix$ShardCountSuffix")
   def toSelectedDocuments(basename: String): String = toAny(basename, s"$SelectedSuffix$DocumentsSuffix")
   def toSelectedScores(basename: String): String = toAny(basename, s"$SelectedSuffix$ScoresSuffix")
   def toSelectedTrec(basename: String): String = toAny(basename, s"$SelectedSuffix$TrecSuffix")
