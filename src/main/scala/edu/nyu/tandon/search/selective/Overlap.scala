@@ -13,7 +13,7 @@ import scalax.io.StandardOpenOption._
   */
 object Overlap extends LazyLogging {
 
-  val OverlapLevels: Seq[Int] = Seq( 5, 10, 20, 50, 100 )
+  val OverlapLevels: Seq[Int] = Seq( 5, 10, 20, 30, 100 )
 
   val CommandName = "overlap"
 
