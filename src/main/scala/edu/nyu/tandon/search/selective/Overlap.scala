@@ -68,7 +68,7 @@ object Overlap extends LazyLogging {
         for (((avgOverlap, w), k) <- (avg zip writers) zip OverlapLevels) {
           logger.info(s"Overlap @$k = $avgOverlap")
           scalax.file.Path.fromString(Path.toOverlap(config.basename, k)).outputStream(WriteTruncate:_*)
-              .write(s"$avgOverlap\n")
+            .write(s"$avgOverlap\n")
           w.close()
         }
 

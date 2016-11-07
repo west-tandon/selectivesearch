@@ -15,11 +15,11 @@ class WriteLineIterator[A](val iterator: Iterator[A]) extends Iterator[A] {
     for (x <- iterator) writer.append(s"$x\n")
     writer.close()
   }
-  def aggregating(implicit toDouble: A => Double): AggregatingWriteLineIterator[A] =
-    new AggregatingWriteLineIterator[A](iterator, toDouble)
+  def aggregating(implicit n: Numeric[A]): AggregatingWriteLineIterator[A] =
+    new AggregatingWriteLineIterator[A](iterator, n)
 }
 
-class AggregatingWriteLineIterator[A](val iterator: Iterator[A], val converter: A => Double) extends Iterator[A] {
+class AggregatingWriteLineIterator[A](val iterator: Iterator[A], val n: Numeric[A]) extends Iterator[A] {
   override def hasNext: Boolean = iterator.hasNext
   override def next(): A = iterator.next()
   def write(file: String): (Double, Int) = {
@@ -28,7 +28,7 @@ class AggregatingWriteLineIterator[A](val iterator: Iterator[A], val converter: 
     var count = 0
     for (x <- iterator) {
       writer.append(s"$x\n")
-      sum += converter(x)
+      sum += n.toDouble(x)
       count += 1
     }
     writer.close()
@@ -38,4 +38,6 @@ class AggregatingWriteLineIterator[A](val iterator: Iterator[A], val converter: 
 
 object WriteLineIterator {
   implicit def iterator2WriteIterator[A](iterator: Iterator[A]): WriteLineIterator[A] = new WriteLineIterator[A](iterator)
+  implicit def stream2WriteIterator[A](stream: Stream[A]): WriteLineIterator[A] = new WriteLineIterator[A](stream.iterator)
+  implicit def seq2WriteIterator[A](seq: Seq[A]): WriteLineIterator[A] = new WriteLineIterator[A](seq.iterator)
 }

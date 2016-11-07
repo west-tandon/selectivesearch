@@ -1,12 +1,13 @@
 package edu.nyu.tandon.search.selective
 
-import java.io._
-
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.ShardSelector.bucketsWithinBudget
-import edu.nyu.tandon.search.selective.data.{Bucket, QueryShardExperiment, ShardQueue}
 import edu.nyu.tandon.search.selective.data.results._
+import edu.nyu.tandon.search.selective.data.{Bucket, QueryShardExperiment, ShardQueue}
+import edu.nyu.tandon.utils.WriteLineIterator._
 import scopt.OptionParser
+
+import scalax.io.StandardOpenOption._
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -53,35 +54,16 @@ object ShardSelector extends LazyLogging {
     }.unzip._1.unzip._1
   }
 
-  def writeSelection(basename: String, selection: Iterable[Seq[Int]]): Unit = {
-    val writer = new BufferedWriter(new FileWriter(Path.toSelection(basename)))
-    val shardCountWriter = new BufferedWriter(new FileWriter(Path.toSelectionShardCount(basename)))
-    for (q <- selection) {
-      writer.append(q.mkString(FieldSeparator))
-      writer.newLine()
-      shardCountWriter.append(q.count(_ > 0).toString)
-      shardCountWriter.newLine()
-    }
-    writer.close()
-    shardCountWriter.close()
+  def writeSelection(selection: Stream[Seq[Int]], basename: String): Unit = {
+    selection.map(_.mkString(FieldSeparator)).write(Path.toSelection(basename))
+    val (sum, count) = selection.map(_.count(_ > 0)).aggregating.write(Path.toSelectionShardCount(basename))
+    scalax.file.Path.fromString(s"${Path.toSelectionShardCount(basename)}.avg").outputStream(WriteTruncate:_*)
+      .write(String.valueOf(sum / count.toDouble))
   }
 
-  def writeSelected(basename: String, selected: Iterable[Seq[Result]]): Unit = {
-    val documentsWriter = new BufferedWriter(new FileWriter(Path.toSelectedDocuments(basename)))
-    for (q <- selected) {
-      documentsWriter.append(q.map(_.globalDocumentId).mkString(FieldSeparator))
-      documentsWriter.newLine()
-    }
-    documentsWriter.close()
-  }
-
-  def writeSelectedScores(basename: String, selected: Iterable[Seq[Result]]): Unit = {
-    val scoresWriter = new BufferedWriter(new FileWriter(Path.toSelectedScores(basename)))
-    for (q <- selected) {
-      scoresWriter.append(q.map(_.score).mkString(FieldSeparator))
-      scoresWriter.newLine()
-    }
-    scoresWriter.close()
+  def writeSelected(selected: Seq[Seq[Result]], basename: String): Unit = {
+    selected.map(_.map(_.globalDocumentId).mkString(FieldSeparator)).write(Path.toSelectedDocuments(basename))
+    selected.map(_.map(_.score).mkString(FieldSeparator)).write(Path.toSelectedScores(basename))
   }
 
   def main(args: Array[String]): Unit = {
@@ -111,12 +93,13 @@ object ShardSelector extends LazyLogging {
         val budgetBasename = s"${config.basename}$BudgetIndicator[${config.budget}]"
 
         val experiment = QueryShardExperiment.fromBasename(config.basename)
+
         val selection = new ShardSelector(experiment, config.budget).selection
-        writeSelection(budgetBasename, selection)
-        val r = resultsByShardsAndBucketsFromBasename(config.basename)
-        val selected = r.select(selection)
-        writeSelected(budgetBasename, selected)
-        writeSelectedScores(budgetBasename, selected)
+        writeSelection(selection, budgetBasename)
+
+        val selected = resultsByShardsAndBucketsFromBasename(config.basename)
+          .select(selection).toSeq
+        writeSelected(selected, budgetBasename)
 
       case None =>
     }
