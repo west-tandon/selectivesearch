@@ -63,7 +63,6 @@ object Load {
   def costsAt(basename: String): Iterator[Seq[Seq[Double]]] = bucketLevelValue(basename, CostSuffix)
   def bucketizedGlobalResultsAt(basename: String): Iterator[Seq[Seq[Seq[Long]]]] = bucketLevelSequence(basename, s"$ResultsSuffix$GlobalSuffix")
 
-//  def costsAt(basename: String, shardId: Int): Iterator[Double] = Lines.fromFile(s"$basename#$shardId.cost").of[Double]
 //  def costs(basename: String, shardId: Int): Iterator[Double] = Lines.fromFile(s"$basename#$shardId.cost").of[Double]
 //  def costs(basename: String): Iterator[Seq[Double]] =
 //    ZippedIterator(for (s <- 0 until shardCount) yield Lines.fromFile(s"$basename#$s.cost").of[Double]).strict
