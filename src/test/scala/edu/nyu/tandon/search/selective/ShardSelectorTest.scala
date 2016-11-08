@@ -53,6 +53,30 @@ class ShardSelectorTest extends BaseFunSuite {
    * Still should return the first bucket.
    */
   test("bucketsWithinBudget: budget lower than the first cost") {
+      // given
+      val buckets = List(
+        Bucket(0, 1, 2),
+        Bucket(1, 1, 1),
+        Bucket(0, 1, 2),
+        Bucket(1, 1, 1)
+      )
+      val budget = 4
+
+      // when
+      val bwb = ShardSelector.bucketsWithinBudget(buckets, budget)
+
+      // then
+      assert(bwb == Seq(
+        Bucket(0, 1, 2),
+        Bucket(1, 1, 1),
+        Bucket(1, 1, 1)
+      ))
+  }
+
+  /*
+   * Still should return the first bucket.
+   */
+  test("bucketsWithinBudget: skip a bucket that can exceeds budget but continue") {
     new Buckets {
       // given
       val budget = 5
