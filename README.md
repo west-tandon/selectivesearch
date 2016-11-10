@@ -46,4 +46,3 @@ or Maven:
     <version>1.0</version>
 </dependency>
 ```
-.
