@@ -13,15 +13,14 @@ import scalax.io.StandardOpenOption._
   * @author michal.siedlaczek@nyu.edu
   */
 class ShardSelector(val queryShardExperiment: QueryShardExperiment,
-                    val budget: Double)
+                    val selectionStrategy: List[Bucket] => List[Bucket])
   extends Iterable[Seq[Int]] {
 
   /**
     * Get the number of buckets to query for each shard.
     */
   def selectedShards(queue: ShardQueue): Seq[Int] = {
-    val buckets = queue.toList
-    val m = bucketsWithinBudget(buckets, budget)
+    val m = selectionStrategy(queue.toList)
       .groupBy(_.shardId)
       .mapValues(_.length)
       .withDefaultValue(0)
@@ -47,24 +46,15 @@ object ShardSelector extends LazyLogging {
   /**
     * Choose the buckets within the budget
     */
-  def bucketsWithinBudget(buckets: List[Bucket], budget: Double): List[Bucket] = {
-
-    var remainingBudget = budget
-    val budgets = for (bucket <- buckets) yield {
-      val value = remainingBudget - bucket.cost
-      if (value >= 0) remainingBudget = value
-      value
-    }
-
-    budgets match {
-      case head :: tail =>
-        if (head < 0) return List(buckets.head)
-        buckets.zip(budgets)
-          .filter(_._2 >= 0)
-          .unzip._1
-      case _ => List()
-    }
+  def bucketsWithinBudget(budget: Double)(buckets: List[Bucket]): List[Bucket] = {
+    val budgets = buckets.scanLeft(budget)((budgetLeft, bucket) => budgetLeft - bucket.cost)
+    buckets.zip(budgets).zipWithIndex.takeWhile {
+      case ((bucket: Bucket, budget: Double), i: Int) => budget - bucket.cost >= 0 || i == 0
+    }.unzip._1.unzip._1
   }
+
+  def bucketsUntilThreshold(threshold: Double)(buckets: List[Bucket]): List[Bucket] =
+    buckets.takeWhile(_.payoff > threshold)
 
   def writeSelection(selection: Stream[Seq[Int]], basename: String): Unit = {
     selection.map(_.mkString(FieldSeparator)).write(Path.toSelection(basename))
@@ -81,7 +71,10 @@ object ShardSelector extends LazyLogging {
   def main(args: Array[String]): Unit = {
 
     case class Config(basename: String = null,
-                      budget: Double = 0.0)
+                      budget: Double = 0.0,
+                      budgetDefined: Boolean = false,
+                      threshold: Double = 0.0,
+                      thresholdDefined: Boolean = false)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -91,9 +84,28 @@ object ShardSelector extends LazyLogging {
         .required()
 
       opt[Double]('b', "budget")
-        .action((x, c) => c.copy(budget = x))
+        .action((x, c) => c.copy(budget = x, budgetDefined = true))
         .text("the budget for queries")
-        .required()
+
+      opt[Double]('t', "threshold")
+        .action((x, c) => c.copy(threshold = x, thresholdDefined = true))
+        .text("the threshold for bucket payoffs")
+
+      checkConfig(c =>
+        if ((!c.budgetDefined && !c.thresholdDefined) || (c.budgetDefined && c.thresholdDefined))
+          failure("define either budget or threshold")
+        else success
+      )
+
+      checkConfig(c =>
+        if (c.budgetDefined && c.budget <= 0) failure("budget must be positive")
+        else success
+      )
+
+      checkConfig(c =>
+        if (c.thresholdDefined && c.threshold < 0) failure("threshold must be non-negative")
+        else success
+      )
 
     }
 
@@ -102,11 +114,14 @@ object ShardSelector extends LazyLogging {
 
         logger.info(s"Selecting shards from ${config.basename} with budget ${config.budget}")
 
-        val budgetBasename = s"${config.basename}$BudgetIndicator[${config.budget}]"
+        val indicator = if (config.budgetDefined) BudgetIndicator else ThresholdIndicator
+        val budgetBasename = s"${config.basename}$indicator[${config.budget}]"
 
         val experiment = QueryShardExperiment.fromBasename(config.basename)
 
-        val selection = new ShardSelector(experiment, config.budget).selection
+        val strategy: List[Bucket] => List[Bucket] = if (config.budgetDefined) bucketsWithinBudget(config.budget)
+        else bucketsUntilThreshold(config.threshold)
+        val selection = new ShardSelector(experiment, strategy).selection
         writeSelection(selection, budgetBasename)
 
         val selected = resultsByShardsAndBucketsFromBasename(config.basename)

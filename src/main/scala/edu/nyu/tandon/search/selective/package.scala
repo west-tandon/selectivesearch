@@ -10,9 +10,11 @@ package object selective {
 
   val NestingIndicator = "#"
   val BudgetIndicator = "$"
+  val ThresholdIndicator = "%"
 
   def base(nestedBasename: String): String = nestedBasename
     .takeWhile(c => s"$c" != NestingIndicator)
     .takeWhile(c => s"$c" != BudgetIndicator)
+    .takeWhile(c => s"$c" != ThresholdIndicator)
 
 }
