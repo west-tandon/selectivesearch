@@ -30,7 +30,7 @@ class ShardQueue(pq: mutable.PriorityQueue[List[Bucket]])
 object ShardQueue {
 
   def maxPayoffQueue(queryData: QueryData): ShardQueue = {
-    val queue = new mutable.PriorityQueue[List[Bucket]]()(Ordering.by(_.head.payoff))
+    val queue = new mutable.PriorityQueue[List[Bucket]]()(Ordering.by((list) => list.head.payoff / list.head.cost))
     queryData.bucketsByShard
       .filter(_.nonEmpty)
       .foreach(queue.enqueue(_))
