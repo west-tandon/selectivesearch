@@ -12,7 +12,7 @@ mainClass in Compile := Some("edu.nyu.tandon.search.selective.Run")
 
 libraryDependencies ++= Seq(
   "com.github.scopt" %% "scopt" % "3.5.0",
-  "org.scalatest" %% "scalatest" % "3.0.0" % "test",
+  "org.scalatest" %% "scalatest" % "2.2.5" % "test",
   "commons-io" % "commons-io" % "2.5",
   "com.github.scala-incubator.io" %% "scala-io-core" % "0.4.3",
   "com.github.scala-incubator.io" %% "scala-io-file" % "0.4.3",

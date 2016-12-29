@@ -10,7 +10,7 @@ class ShardSelectorTest extends BaseFunSuite {
 
   trait Selector {
     val queryExperiment = QueryShardExperiment.fromBasename(getClass.getResource("/").getPath + "test")
-    val selector = new ShardSelector(queryExperiment, 5)
+    val selector = new ShardSelector(queryExperiment, ShardSelector.bucketsWithinBudget(5))
   }
 
   trait Buckets {
@@ -23,13 +23,26 @@ class ShardSelectorTest extends BaseFunSuite {
     )
   }
 
+  test("bucketsUntilThreshold") {
+    new Buckets {
+      // given
+      val threshold = 2.0
+
+      // when
+      val but = ShardSelector.bucketsUntilThreshold(threshold)(buckets)
+
+      // then
+      assert(but == Seq(Bucket(0, 9, 9), Bucket(1, 8, 8), Bucket(0, 5, 5)))
+    }
+  }
+
   test("bucketsWithinBudget") {
     new Buckets {
       // given
       val budget = 17.5
 
       // when
-      val bwb = ShardSelector.bucketsWithinBudget(buckets, budget)
+      val bwb = ShardSelector.bucketsWithinBudget(budget)(buckets)
 
       // then
       assert(bwb == Seq(Bucket(0, 9, 9), Bucket(1, 8, 8)))
@@ -42,7 +55,7 @@ class ShardSelectorTest extends BaseFunSuite {
       val budget = 17
 
       // when
-      val bwb = ShardSelector.bucketsWithinBudget(buckets, budget)
+      val bwb = ShardSelector.bucketsWithinBudget(budget)(buckets)
 
       // then
       assert(bwb == Seq(Bucket(0, 9, 9), Bucket(1, 8, 8)))
@@ -53,36 +66,12 @@ class ShardSelectorTest extends BaseFunSuite {
    * Still should return the first bucket.
    */
   test("bucketsWithinBudget: budget lower than the first cost") {
-      // given
-      val buckets = List(
-        Bucket(0, 1, 2),
-        Bucket(1, 1, 1),
-        Bucket(0, 1, 2),
-        Bucket(1, 1, 1)
-      )
-      val budget = 4
-
-      // when
-      val bwb = ShardSelector.bucketsWithinBudget(buckets, budget)
-
-      // then
-      assert(bwb == Seq(
-        Bucket(0, 1, 2),
-        Bucket(1, 1, 1),
-        Bucket(1, 1, 1)
-      ))
-  }
-
-  /*
-   * Still should return the first bucket.
-   */
-  test("bucketsWithinBudget: skip a bucket that can exceeds budget but continue") {
     new Buckets {
       // given
       val budget = 5
 
       // when
-      val bwb = ShardSelector.bucketsWithinBudget(buckets, budget)
+      val bwb = ShardSelector.bucketsWithinBudget(budget)(buckets)
 
       // then
       assert(bwb == Seq(Bucket(0, 9, 9)))
@@ -119,6 +108,20 @@ class ShardSelectorTest extends BaseFunSuite {
       "test$[5.0].selection.shard-count.avg",
       "test$[5.0].selected.docs",
       "test$[5.0].selected.scores"), resourcesPath, tmpDir.toString)
+  }
+
+  test("main: thresholds") {
+    // given
+    val tmpDir = createTemporaryCopyOfResources(regex = ".*sizes|.*results.*|.*scores|.*properties|.*queries|.*payoff|.*cost")
+
+    // when
+    ShardSelector.main(Array(
+      s"$tmpDir/test",
+      "--threshold", "5"
+    ))
+
+    // then
+
   }
 
 }
