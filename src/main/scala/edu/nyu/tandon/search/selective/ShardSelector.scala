@@ -1,7 +1,6 @@
 package edu.nyu.tandon.search.selective
 
 import com.typesafe.scalalogging.LazyLogging
-import edu.nyu.tandon.search.selective.ShardSelector.bucketsWithinBudget
 import edu.nyu.tandon.search.selective.data.results._
 import edu.nyu.tandon.search.selective.data.{Bucket, QueryShardExperiment, ShardQueue}
 import edu.nyu.tandon.utils.WriteLineIterator._
@@ -112,10 +111,11 @@ object ShardSelector extends LazyLogging {
     parser.parse(args, Config()) match {
       case Some(config) =>
 
-        logger.info(s"Selecting shards from ${config.basename} with budget ${config.budget}")
+        val param = if (config.budgetDefined) s"budget ${config.budget}" else s"budget ${config.threshold}"
+        logger.info(s"Selecting shards from ${config.basename} with $param")
 
         val indicator = if (config.budgetDefined) BudgetIndicator else ThresholdIndicator
-        val budgetBasename = s"${config.basename}$indicator[${config.budget}]"
+        val budgetBasename = s"${config.basename}$indicator[${if (config.budgetDefined) config.budget else config.threshold}]"
 
         val experiment = QueryShardExperiment.fromBasename(config.basename)
 
