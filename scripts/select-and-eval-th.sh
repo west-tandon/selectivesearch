@@ -24,7 +24,7 @@ threshold=$1
 
 selectivesearch select-shards ${basename} --threshold ${threshold}
 
-thresholdBase="${basename}\%[${threshold}]"
+thresholdBase="${basename}%\[${threshold}]"
 
 selectivesearch selection2time "${thresholdBase}"
 selectivesearch overlap "${thresholdBase}"
