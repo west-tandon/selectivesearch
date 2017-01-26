@@ -73,7 +73,8 @@ object ShardSelector extends LazyLogging {
                       budget: Double = 0.0,
                       budgetDefined: Boolean = false,
                       threshold: Double = 0.0,
-                      thresholdDefined: Boolean = false)
+                      thresholdDefined: Boolean = false,
+                      paramStr: String = null)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -82,12 +83,12 @@ object ShardSelector extends LazyLogging {
         .text("the prefix of the files")
         .required()
 
-      opt[Double]('b', "budget")
-        .action((x, c) => c.copy(budget = x, budgetDefined = true))
+      opt[String]('b', "budget")
+        .action((x, c) => c.copy(paramStr = x, budget = x.toDouble, budgetDefined = true))
         .text("the budget for queries")
 
-      opt[Double]('t', "threshold")
-        .action((x, c) => c.copy(threshold = x, thresholdDefined = true))
+      opt[String]('t', "threshold")
+        .action((x, c) => c.copy(paramStr = x, threshold = x.toDouble, thresholdDefined = true))
         .text("the threshold for bucket payoffs")
 
       checkConfig(c =>
@@ -111,11 +112,10 @@ object ShardSelector extends LazyLogging {
     parser.parse(args, Config()) match {
       case Some(config) =>
 
-        val param = if (config.budgetDefined) s"budget ${config.budget}" else s"budget ${config.threshold}"
-        logger.info(s"Selecting shards from ${config.basename} with $param")
+        logger.info(s"Selecting shards from ${config.basename} with ${if (config.budgetDefined) "budget" else "threshold"} ${config.paramStr}")
 
         val indicator = if (config.budgetDefined) BudgetIndicator else ThresholdIndicator
-        val budgetBasename = s"${config.basename}$indicator[${if (config.budgetDefined) config.budget else config.threshold}]"
+        val budgetBasename = s"${config.basename}$indicator[${config.paramStr}]"
 
         val experiment = QueryShardExperiment.fromBasename(config.basename)
 
