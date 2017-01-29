@@ -51,7 +51,7 @@ class TrecResultsTest extends BaseFunSuite {
 
   test("fromSelected") {
     new Trec {
-      TrecResults.fromSelected(s"$resourcesPath/test", s"$resourcesPath/test$BudgetIndicator[5.0]").map(_.toString).toSeq should contain theSameElementsInOrderAs expected
+      TrecResults.fromSelected(s"$resourcesPath/test", s"$resourcesPath/test$BudgetIndicator[5]").map(_.toString).toSeq should contain theSameElementsInOrderAs expected
     }
   }
 
