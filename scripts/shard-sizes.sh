@@ -8,5 +8,7 @@ if [ -z "${basename}" ]; then echo "You have to define cluster basename (1)."; e
 
 ls ${basename}*-*titles | while read file;
 do
-        wc -l ${file}
-done
+        number=`basename ${file} | sed "s/.*-//" | sed "s/\..*//"`
+        wc=`wc -l ${file} | cut -d" " -f1`
+        echo "${number} ${wc}"
+done | sort -n | cut -d" " -f2
