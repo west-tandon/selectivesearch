@@ -48,12 +48,12 @@ class OverlapTest extends BaseFunSuite {
     val tmpDir = createTemporaryCopyOfResources(regex = ".*properties|.*selected.*|.*results.*")
 
     // when
-    Overlap.main(Array(s"$tmpDir/test$BudgetIndicator[5.0]"))
+    Overlap.main(Array(s"$tmpDir/test$BudgetIndicator[5]"))
 
     // then
-    compareFilesBetweenDirectories(for (k <- Overlap.OverlapLevels) yield s"test$BudgetIndicator[5.0]@$k.overlaps",
+    compareFilesBetweenDirectories(for (k <- Overlap.OverlapLevels) yield s"test$BudgetIndicator[5]@$k.overlaps",
       getClass.getResource("/").getPath, tmpDir.toString)
-    compareFilesBetweenDirectories(for (k <- Overlap.OverlapLevels) yield s"test$BudgetIndicator[5.0]@$k.overlap",
+    compareFilesBetweenDirectories(for (k <- Overlap.OverlapLevels) yield s"test$BudgetIndicator[5]@$k.overlap",
       getClass.getResource("/").getPath, tmpDir.toString)
   }
 
