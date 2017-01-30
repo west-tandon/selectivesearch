@@ -17,7 +17,7 @@ package object results {
 
   def resultsByBucketsFromBasename(basename: String): GroupedResults = {
     val bucketCount = Properties.get(basename).bucketCount
-    val buckets = for (b <- 0 until bucketCount) yield FlatResults.fromBasename(s"$basename#$b")
+    val buckets = for (b <- 0 until bucketCount) yield FlatResults.fromBasename(s"$basename#$b").toList.iterator
     new GroupedResults(ZippedIterator(buckets).strict, bucketCount)
   }
 
