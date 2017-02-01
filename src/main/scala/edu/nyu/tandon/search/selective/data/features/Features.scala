@@ -2,6 +2,7 @@ package edu.nyu.tandon.search.selective.data.features
 
 import java.io.File
 
+import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.Spark
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features.{BID, QID, SID}
@@ -17,7 +18,7 @@ class Features(val basename: String,
                val queryFeatureNames: List[String],
                val shardFeatureNames: List[String],
                val bucketFeatureNames: List[String],
-               val bucketCount: Int) {
+               val bucketCount: Int) extends LazyLogging {
 
   /* Shards */
   lazy val shardCount: Int = shardSizes.length
@@ -83,14 +84,18 @@ class Features(val basename: String,
     }
   }
 
-  lazy val queryFeatures: DataFrame = (for (feature <- queryFeatureNames) yield
-      Spark.session.createDataFrame(
-        Lines.fromFile(s"$basename.$feature").of[Double].zipWithIndex.map {
-          case (value, queryId) => (queryId, value)
-        }.toList
-      ).withColumnRenamed("_1", QID)
-        .withColumnRenamed("_2", feature)
-    ).reduce(_.join(_, QID))
+  lazy val queryFeatures: DataFrame = {
+    //(for (feature <- queryFeatureNames) yield
+    logger.debug("Loading lines")
+    val list = Lines.fromFile(s"$basename.lengths").of[Double].zipWithIndex.map {
+      case (value, queryId) => (queryId, value)
+    }.toList
+    logger.debug("Creating data frame from lines")
+    Spark.session.createDataFrame(list)
+      .withColumnRenamed("_1", QID)
+      .withColumnRenamed("_2", "lengths")
+  }
+//    ).reduce(_.join(_, QID))
 
   lazy val shardFeatures: DataFrame = (for (feature <- shardFeatureNames) yield
     (for (shardId <- 0 until shardCount) yield
