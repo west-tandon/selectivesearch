@@ -92,11 +92,12 @@ class Features(val basename: String,
         logger.debug(s"($value, $queryId)")
         (queryId, value)
     }.toList
+    val x = Spark.session
     logger.debug("Creating data frame from lines")
     val df = Spark.session.createDataFrame(list)
-//      .withColumnRenamed("_1", QID)
-//      .withColumnRenamed("_2", "lengths")
-    logger.debug("Creating data frame from lines")
+      .withColumnRenamed("_1", QID)
+      .withColumnRenamed("_2", "lengths")
+    logger.debug("Created data frame from lines")
     df
   }
 //    ).reduce(_.join(_, QID))
