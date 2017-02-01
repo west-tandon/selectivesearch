@@ -45,11 +45,11 @@ object LearnPayoffs extends LazyLogging {
   def trainingDataFromBasename(basename: String): DataFrame = {
     val properties = Properties.get(basename)
     val features = Features.get(properties)
-    logger.debug("Loading shard features")
-    val shardFeatures = features.shardFeatures
     logger.debug("Loading query features")
 //    val queryFeatures = features.queryFeatures
     val queryFeatures = features.queryFeatures
+    logger.debug("Loading shard features")
+    val shardFeatures = features.shardFeatures
     logger.debug("Loading payoffs")
     val payoffs = payoffLabels(basename, properties, features)
     logger.debug("Joining features")
