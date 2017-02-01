@@ -26,9 +26,4 @@ class GroupedGroupedResultsTest extends BaseFunSuite {
     }
   }
 
-  test("stress") {
-    for (i <- 0 until 10000)
-      yield FlatResults.fromBasename(s"$resourcesPath/features/test#0").toList.iterator
-  }
-
 }
