@@ -1,5 +1,6 @@
 package edu.nyu.tandon.search.selective.data.features
 
+import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.results.Result
 import edu.nyu.tandon.test.BaseFunSuite
 import org.scalatest.Matchers._
@@ -10,7 +11,7 @@ import org.scalatest.Matchers._
 class FeaturesTest extends BaseFunSuite {
 
   trait F {
-    val f = new Features(s"$resourcesPath/features/test")
+    val f = Properties.get(s"$resourcesPath/test").features
   }
 
   test("shardCount") {

@@ -12,7 +12,7 @@ import org.scalatest.Matchers._
 class LearnPayoffsTest extends BaseFunSuite {
 
   test("dataFrameFromBasename") {
-    val actual = LearnPayoffs.trainingDataFromBasename(s"$resourcesPath/test").collectAsList()
+    val actual = LearnPayoffs.trainingDataFromBasename(s"$resourcesPath/test").orderBy().collectAsList()
     val expected = List(
       Row(Vectors.dense(2.0, 0.1, 0.001, 0.0), 1.0),
       Row(Vectors.dense(2.0, 0.1, 0.001, 1.0), 0.0),
