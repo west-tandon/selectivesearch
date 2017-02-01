@@ -94,8 +94,8 @@ class Features(val basename: String,
     }.toList
     logger.debug("Creating data frame from lines")
     val df = Spark.session.createDataFrame(list)
-      .withColumnRenamed("_1", QID)
-      .withColumnRenamed("_2", "lengths")
+//      .withColumnRenamed("_1", QID)
+//      .withColumnRenamed("_2", "lengths")
     logger.debug("Creating data frame from lines")
     df
   }
