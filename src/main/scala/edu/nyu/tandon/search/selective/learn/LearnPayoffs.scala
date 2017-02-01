@@ -1,5 +1,6 @@
 package edu.nyu.tandon.search.selective.learn
 
+import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
@@ -18,7 +19,7 @@ import scalax.io.StandardOpenOption._
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-object LearnPayoffs {
+object LearnPayoffs extends LazyLogging {
 
   val CommandName = "train-payoffs"
 
@@ -44,14 +45,22 @@ object LearnPayoffs {
   def trainingDataFromBasename(basename: String): DataFrame = {
     val properties = Properties.get(basename)
     val features = Features.get(properties)
-    val df = features.queryFeatures
-      .join(features.shardFeatures, QID)
-      .join(payoffLabels(basename, properties, features), Seq(QID, SID))
+    logger.debug("Loading query features")
+    val queryFeatures = features.queryFeatures
+    logger.debug("Loading shard features")
+    val shardFeatures = features.shardFeatures
+    logger.debug("Loading payoffs")
+    val payoffs = payoffLabels(basename, properties, features)
+    logger.debug("Joining features")
+    val df = queryFeatures
+      .join(shardFeatures, QID)
+      .join(payoffs, Seq(QID, SID))
     val featureColumns = properties.queryPayoffFeaturesNames ++
       properties.shardPayoffFeaturesNames ++ List(BID)
     val featureAssembler = new VectorAssembler()
       .setInputCols(featureColumns.toArray)
       .setOutputCol(FeaturesColumn)
+    logger.debug("Assembling features")
     featureAssembler.transform(df)
       .withColumnRenamed(properties.payoffLabel, LabelColumn)
       .select(FeaturesColumn, LabelColumn)
