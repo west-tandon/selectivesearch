@@ -47,10 +47,14 @@ object LearnPayoffs extends LazyLogging {
     val properties = Properties.get(basename)
     val features = Features.get(properties)
 
+    logger.debug(s"loading query features: ${properties.queryFeatures("payoff")}")
     val queryFeatures = features.payoffQueryFeatures
+    logger.debug(s"loading shard features: ${properties.shardFeatures("payoff")}")
     val shardFeatures = features.payoffShardFeatures
+    logger.debug(s"loading payoffs")
     val payoffs = payoffLabels(basename, properties, features)
 
+    logger.debug(s"joining features")
     val df = queryFeatures
       .join(shardFeatures, QID)
       .join(payoffs, Seq(QID, SID))
@@ -61,6 +65,7 @@ object LearnPayoffs extends LazyLogging {
     val featureAssembler = new VectorAssembler()
       .setInputCols(featureColumns.toArray)
       .setOutputCol(FeaturesColumn)
+    logger.debug(s"assembling features")
     featureAssembler.transform(df)
       .withColumnRenamed(properties.payoffLabel, LabelColumn)
       .select(FeaturesColumn, LabelColumn)
@@ -84,6 +89,7 @@ object LearnPayoffs extends LazyLogging {
 
         trainingDataFromBasename(config.basename).write.mode(Overwrite).save(s"${config.basename}.data")
 
+        logger.debug(s"training model")
         val Array(trainingData, testData) = Spark.session
           .read.parquet(s"${config.basename}.data").randomSplit(Array(0.7, 0.3))
 
