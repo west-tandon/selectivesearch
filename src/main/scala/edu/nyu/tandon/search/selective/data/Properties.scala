@@ -22,13 +22,14 @@ class Properties(val file: String) {
     value
   }
 
+  def queryFeatures(v: String): List[String] = getProperty(s"features.$v.query").split(",").map(_.trim).toList
+  def shardFeatures(v: String): List[String] = getProperty(s"features.$v.shard").split(",").map(_.trim).toList
+
   lazy val featuresPath: String = getProperty("features")
   lazy val bucketCount: Int = getProperty("buckets.count").toInt
   lazy val k: Int = getProperty("k").toInt
-  lazy val queryPayoffFeaturesNames: List[String] = getProperty("features.payoff.query").split(",").map(_.trim).toList
-  lazy val shardPayoffFeaturesNames: List[String] = getProperty("features.payoff.shard").split(",").map(_.trim).toList
-  lazy val bucketPayoffFeaturesNames: List[String] = getProperty("features.payoff.bucket").split(",").map(_.trim).toList
   lazy val payoffLabel: String = getProperty("features.payoff.label")
+  lazy val costLabel: String = getProperty("features.cost.label")
   lazy val features: Features = Features.get(this)
 
 }

@@ -43,25 +43,24 @@ object LearnPayoffs extends LazyLogging {
       ).reduce(_.union(_)).reduce(_.union(_))
 
   def trainingDataFromBasename(basename: String): DataFrame = {
+
     val properties = Properties.get(basename)
     val features = Features.get(properties)
-    logger.debug("Loading query features")
-//    val queryFeatures = features.queryFeatures
-    val queryFeatures = features.queryFeatures
-    logger.debug("Loading shard features")
-    val shardFeatures = features.shardFeatures
-    logger.debug("Loading payoffs")
+
+    val queryFeatures = features.payoffQueryFeatures
+    val shardFeatures = features.payoffShardFeatures
     val payoffs = payoffLabels(basename, properties, features)
-    logger.debug("Joining features")
+
     val df = queryFeatures
       .join(shardFeatures, QID)
       .join(payoffs, Seq(QID, SID))
-    val featureColumns = properties.queryPayoffFeaturesNames ++
-      properties.shardPayoffFeaturesNames ++ List(BID)
+
+    val featureColumns = properties.queryFeatures("payoff") ++
+      properties.shardFeatures("payoff") ++ List(BID)
+
     val featureAssembler = new VectorAssembler()
       .setInputCols(featureColumns.toArray)
       .setOutputCol(FeaturesColumn)
-    logger.debug("Assembling features")
     featureAssembler.transform(df)
       .withColumnRenamed(properties.payoffLabel, LabelColumn)
       .select(FeaturesColumn, LabelColumn)
