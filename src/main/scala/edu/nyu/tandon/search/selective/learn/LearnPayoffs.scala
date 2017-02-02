@@ -66,9 +66,11 @@ object LearnPayoffs extends LazyLogging {
       .setInputCols(featureColumns.toArray)
       .setOutputCol(FeaturesColumn)
     logger.debug(s"assembling features")
-    featureAssembler.transform(df)
+    val data = featureAssembler.transform(df)
       .withColumnRenamed(properties.payoffLabel, LabelColumn)
       .select(FeaturesColumn, LabelColumn)
+    logger.debug(s"assembled")
+    data
   }
 
   def main(args: Array[String]): Unit = {
