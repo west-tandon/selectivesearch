@@ -7,12 +7,15 @@ import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
+import edu.nyu.tandon.search.selective.data.features.Features._
 import edu.nyu.tandon.search.selective.learn.LearnPayoffs.{BucketColumn, FeaturesColumn, QueryColumn, ShardColumn}
 import edu.nyu.tandon.search.selective.learn.PredictPayoffs.PredictedLabelColumn
+import edu.nyu.tandon.utils.Lines
 import org.apache.commons.io.FileUtils
+import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.ml.linalg.{Vector, Vectors}
 import org.apache.spark.ml.regression.RandomForestRegressionModel
-import org.apache.spark.sql.Row
+import org.apache.spark.sql._
 import org.apache.spark.sql.SaveMode.Overwrite
 
 import scala.language.implicitConversions
@@ -78,25 +81,25 @@ object Payoffs {
     val shardCount = features.shardCount
     val queryCount = features.queries.length
 
-    val lengths = features.queryLengths
-    val redde = features.reddeScores
-    val shrkc = features.shrkcScores
+    val bucketData = Spark.session.createDataFrame(for (b <- 0 until properties.bucketCount) yield (b, b))
+      .withColumnRenamed("_1", BID)
+      .drop("_2")
+    val raw = features.queryFeatures
+      .join(features.shardFeatures, QID)
+      .join(bucketData)
 
-    val data = for (((queryLength, queryId), (reddeScores, shrkcScores)) <- lengths.zipWithIndex zip (redde zip shrkc);
-                    ((shardReddeScore, shardShrkcScore), shardId) <- reddeScores.zip(shrkcScores).zipWithIndex;
-                    bucket <- 0 until bucketCount) yield
-      (queryId, shardId, bucket, Vectors.dense(queryLength, shardReddeScore, shardShrkcScore, bucket.toDouble))
-
-    val df = Spark.session.createDataFrame(data.toSeq)
-      .withColumnRenamed("_1", QueryColumn)
-      .withColumnRenamed("_2", ShardColumn)
-      .withColumnRenamed("_3", BucketColumn)
-      .withColumnRenamed("_4", FeaturesColumn)
+    val featureColumns = properties.queryPayoffFeaturesNames ++
+      properties.shardPayoffFeaturesNames ++ List(BID)
+    val featureAssembler = new VectorAssembler()
+      .setInputCols(featureColumns.toArray)
+      .setOutputCol(FeaturesColumn)
+    val df = featureAssembler.transform(raw)
+      .select(QID, SID, BID, FeaturesColumn)
 
     /* save predictions to temporary file */
     val tmp = Files.createTempDirectory(PredictedLabelColumn)
     model.transform(df).write.mode(Overwrite).save(tmp.toString)
-    val predictions = Spark.session.read.parquet(tmp.toString).sort(QueryColumn, ShardColumn, BucketColumn).collect()
+    val predictions = Spark.session.read.parquet(tmp.toString).sort(QID, SID, BID).collect()
     FileUtils.deleteDirectory(tmp.toFile)
 
     new Payoffs(

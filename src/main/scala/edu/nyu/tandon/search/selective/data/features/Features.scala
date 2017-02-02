@@ -84,23 +84,16 @@ class Features(val basename: String,
     }
   }
 
-  lazy val queryFeatures: DataFrame = {
-    //(for (feature <- queryFeatureNames) yield
-    logger.debug("Loading lines")
+  lazy val queryFeatures: DataFrame = (for (feature <- queryFeatureNames) yield {
     val list = Lines.fromFile(s"$basename.lengths").of[Double].zipWithIndex.map {
       case (value, queryId) =>
         logger.debug(s"($value, $queryId)")
         (queryId, value)
     }.toList
-    val x = Spark.session
-    logger.debug("Creating data frame from lines")
-    val df = Spark.session.createDataFrame(list)
+    Spark.session.createDataFrame(list)
       .withColumnRenamed("_1", QID)
       .withColumnRenamed("_2", "lengths")
-    logger.debug("Created data frame from lines")
-    df
-  }
-//    ).reduce(_.join(_, QID))
+  }).reduce(_.join(_, QID))
 
   lazy val shardFeatures: DataFrame = (for (feature <- shardFeatureNames) yield
     (for (shardId <- 0 until shardCount) yield
