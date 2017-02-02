@@ -88,9 +88,7 @@ class Features(val basename: String,
 
   def queryFeatures(v: String): DataFrame = (for (feature <- properties.queryFeatures(v)) yield {
     val list = Lines.fromFile(s"$basename.lengths").of[Double].zipWithIndex.map {
-      case (value, queryId) =>
-        logger.debug(s"($value, $queryId)")
-        (queryId, value)
+      case (value, queryId) => (queryId, value)
     }.toList
     Spark.session.createDataFrame(list)
       .withColumnRenamed("_1", QID)
