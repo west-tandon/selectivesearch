@@ -47,15 +47,16 @@ object LearnPayoffs extends LazyLogging {
     val properties = Properties.get(basename)
     val features = Features.get(properties)
 
-    val queryFeatures = features.queryFeatures
-    val shardFeatures = features.shardFeatures
+    val queryFeatures = features.payoffQueryFeatures
+    val shardFeatures = features.payoffShardFeatures
     val payoffs = payoffLabels(basename, properties, features)
 
     val df = queryFeatures
       .join(shardFeatures, QID)
       .join(payoffs, Seq(QID, SID))
-    val featureColumns = properties.queryPayoffFeaturesNames ++
-      properties.shardPayoffFeaturesNames ++ List(BID)
+
+    val featureColumns = properties.queryFeatures("payoff") ++
+      properties.shardFeatures("payoff") ++ List(BID)
 
     val featureAssembler = new VectorAssembler()
       .setInputCols(featureColumns.toArray)

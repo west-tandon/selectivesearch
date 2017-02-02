@@ -5,12 +5,12 @@ import java.nio.file.Files
 
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
-import edu.nyu.tandon.search.selective.learn.TrainCosts.{FeaturesColumn, QueryColumn, ShardColumn}
+import edu.nyu.tandon.search.selective.data.features.Features._
+import edu.nyu.tandon.search.selective.learn.TrainCosts.FeaturesColumn
 import edu.nyu.tandon.search.selective.{Path, Spark}
-import edu.nyu.tandon.utils.TupleIterables._
-import edu.nyu.tandon.utils.TupleIterators._
 import org.apache.commons.io.FileUtils
-import org.apache.spark.ml.linalg.{Vector, Vectors}
+import org.apache.spark.ml.feature.VectorAssembler
+import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.regression.RandomForestRegressionModel
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.SaveMode._
@@ -26,41 +26,29 @@ object PredictCosts {
   val PredictedLabelColumn = "prediction"
 
   def costsFromRegressionModel(basename: String, model: RandomForestRegressionModel): Iterator[Seq[Seq[Double]]] = {
-    val properties = Properties.get(basename)
-    val features = Features.get(properties)
 
+    val features = Features.get(basename)
     val shardCount = features.shardCount
-    val bucketCount = properties.bucketCount
+    val bucketCount = features.properties.bucketCount
     val queryCount = features.queries.length
 
-    val featureIterator = features.queryLengths
-      .zipWithIndex
-      .flatZip(features.maxListLen1)
-      .flatZip(features.maxListLen2)
-      .flatZip(features.minListLen1)
-      .flatZip(features.minListLen2)
-      .flatZip(features.sumListLen)
+    val queryFeatures = features.costQueryFeatures
+    val shardFeatures = features.costShardFeatures
 
-    val data = for ((queryLength, queryId, allMaxLL1, allMaxLL2, allMinLL1, allMinLL2, allSumLen) <- featureIterator) yield {
-      val shardFeatureIterator = allMaxLL1
-        .zip(allMaxLL2)
-        .flatZip(allMinLL1)
-        .flatZip(allMinLL2)
-        .flatZip(allSumLen)
-        .flatZipWithIndex
-      for ((maxLL1, maxLL2, minLL1, minLL2, sumLen, shardId) <- shardFeatureIterator)
-        yield (queryId, shardId, Vectors.dense(queryLength, maxLL1, maxLL2, minLL1, minLL2, sumLen))
-    }
+    val featureColumns = features.properties.queryFeatures("cost") ++
+      features.properties.shardFeatures("cost")
+    val featureAssembler = new VectorAssembler()
+      .setInputCols(featureColumns.toArray)
+      .setOutputCol(FeaturesColumn)
 
-    val df = Spark.session.createDataFrame(data.flatten.toSeq)
-      .withColumnRenamed("_1", QueryColumn)
-      .withColumnRenamed("_2", ShardColumn)
-      .withColumnRenamed("_3", FeaturesColumn)
+    val df = featureAssembler.transform(queryFeatures.join(shardFeatures, QID))
+      .select(QID, SID, FeaturesColumn)
+
 
     /* save predictions to temporary file */
     val tmp = Files.createTempDirectory(PredictedLabelColumn)
     model.transform(df).write.mode(Overwrite).save(tmp.toString)
-    val predictions = Spark.session.read.parquet(tmp.toString).sort(QueryColumn, ShardColumn).collect()
+    val predictions = Spark.session.read.parquet(tmp.toString).sort(QID, SID).collect()
     FileUtils.deleteDirectory(tmp.toFile)
 
     require(predictions.length == queryCount * shardCount, s"expected ${queryCount * shardCount} records, found ${predictions.length}")

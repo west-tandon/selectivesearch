@@ -1,11 +1,12 @@
 package edu.nyu.tandon.search.selective.learn
 
 import edu.nyu.tandon.search.selective.data.features.Features
+import edu.nyu.tandon.search.selective.data.features.Features._
 import edu.nyu.tandon.search.selective.{Path, Spark}
-import edu.nyu.tandon.utils.TupleIterables._
-import edu.nyu.tandon.utils.TupleIterators._
+import edu.nyu.tandon.utils.Lines
+import edu.nyu.tandon.utils.Lines._
 import org.apache.spark.ml.evaluation.RegressionEvaluator
-import org.apache.spark.ml.linalg.Vectors
+import org.apache.spark.ml.feature.VectorAssembler
 import org.apache.spark.ml.regression.RandomForestRegressor
 import org.apache.spark.sql.SaveMode._
 import org.apache.spark.sql._
@@ -23,35 +24,39 @@ object TrainCosts {
 
   val FeaturesColumn = "features"
   val LabelColumn = "label"
-  val ShardColumn = "shard"
-  val QueryColumn = "query"
+
+  def costLabels(features: Features): DataFrame =
+    (for (shardId <- 0 until features.shardCount) yield
+        Spark.session.createDataFrame(
+          Lines.fromFile(s"${features.basename}#$shardId.${features.properties.costLabel}").of[Double].zipWithIndex.map {
+            case (value, queryId) => (queryId, shardId, value)
+          }.toList
+        ).withColumnRenamed("_1", QID)
+          .withColumnRenamed("_2", SID)
+          .withColumnRenamed("_3", features.properties.costLabel)
+      ).reduce(_.union(_))
 
   def trainingDataFromBasename(basename: String): DataFrame = {
 
     val features = Features.get(basename)
-    val featureIterator = features.queryLengths
-      .zip(features.maxListLen1)
-      .flatZip(features.maxListLen2)
-      .flatZip(features.minListLen1)
-      .flatZip(features.minListLen2)
-      .flatZip(features.sumListLen)
-      .flatZip(features.costs)
 
-    val data = for ((queryLength, allMaxLL1, allMaxLL2, allMinLL1, allMinLL2, allSumLen, allCosts) <- featureIterator) yield {
-      val shardFeatureIterator = allMaxLL1
-        .zip(allMaxLL2)
-        .flatZip(allMinLL1)
-        .flatZip(allMinLL2)
-        .flatZip(allSumLen)
-        .flatZip(allCosts)
-      for ((maxLL1, maxLL2, minLL1, minLL2, sumLen, cost) <- shardFeatureIterator)
-        yield (Vectors.dense(queryLength, maxLL1, maxLL2, minLL1, minLL2, sumLen), cost)
-    }
+    val queryFeatures = features.costQueryFeatures
+    val shardFeatures = features.costShardFeatures
+    val costs = costLabels(features)
 
-    Spark.session
-      .createDataFrame(data.flatten.toSeq)
-      .withColumnRenamed("_1", FeaturesColumn)
-      .withColumnRenamed("_2", LabelColumn)
+    val df = queryFeatures
+      .join(shardFeatures, QID)
+      .join(costs, Seq(QID, SID))
+
+    val featureColumns = features.properties.queryFeatures("cost") ++
+      features.properties.shardFeatures("cost")
+
+    val featureAssembler = new VectorAssembler()
+      .setInputCols(featureColumns.toArray)
+      .setOutputCol(FeaturesColumn)
+    featureAssembler.transform(df)
+      .withColumnRenamed(features.properties.costLabel, LabelColumn)
+      .select(FeaturesColumn, LabelColumn)
   }
 
   def main(args: Array[String]): Unit = {

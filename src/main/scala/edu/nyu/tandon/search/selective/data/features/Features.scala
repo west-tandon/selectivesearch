@@ -15,10 +15,7 @@ import org.apache.spark.sql.DataFrame
   * @author michal.siedlaczek@nyu.edu
   */
 class Features(val basename: String,
-               val queryFeatureNames: List[String],
-               val shardFeatureNames: List[String],
-               val bucketFeatureNames: List[String],
-               val bucketCount: Int) extends LazyLogging {
+               val properties: Properties) extends LazyLogging {
 
   /* Shards */
   lazy val shardCount: Int = shardSizes.length
@@ -84,7 +81,12 @@ class Features(val basename: String,
     }
   }
 
-  lazy val queryFeatures: DataFrame = (for (feature <- queryFeatureNames) yield {
+  lazy val payoffQueryFeatures: DataFrame = queryFeatures("payoff")
+  lazy val payoffShardFeatures: DataFrame = shardFeatures("payoff")
+  lazy val costQueryFeatures: DataFrame = queryFeatures("cost")
+  lazy val costShardFeatures: DataFrame = shardFeatures("cost")
+
+  def queryFeatures(v: String): DataFrame = (for (feature <- properties.queryFeatures(v)) yield {
     val list = Lines.fromFile(s"$basename.lengths").of[Double].zipWithIndex.map {
       case (value, queryId) =>
         logger.debug(s"($value, $queryId)")
@@ -95,7 +97,7 @@ class Features(val basename: String,
       .withColumnRenamed("_2", "lengths")
   }).reduce(_.join(_, QID))
 
-  lazy val shardFeatures: DataFrame = (for (feature <- shardFeatureNames) yield
+  def shardFeatures(v: String): DataFrame = (for (feature <- properties.shardFeatures(v)) yield
     (for (shardId <- 0 until shardCount) yield
       Spark.session.createDataFrame(
         Lines.fromFile(s"$basename#$shardId.$feature").of[Double].zipWithIndex.map {
@@ -118,15 +120,7 @@ object Features {
     get(Properties.get(basename))
   }
   def get(properties: Properties): Features = {
-    if (new File(properties.featuresPath).isAbsolute) new Features(properties.featuresPath,
-      properties.queryPayoffFeaturesNames,
-      properties.shardPayoffFeaturesNames,
-      properties.bucketPayoffFeaturesNames,
-      properties.bucketCount)
-    else new Features(s"${new File(properties.file).getAbsoluteFile.getParent}/${properties.featuresPath}",
-      properties.queryPayoffFeaturesNames,
-      properties.shardPayoffFeaturesNames,
-      properties.bucketPayoffFeaturesNames,
-      properties.bucketCount)
+    if (new File(properties.featuresPath).isAbsolute) new Features(properties.featuresPath, properties)
+    else new Features(s"${new File(properties.file).getAbsoluteFile.getParent}/${properties.featuresPath}", properties)
   }
 }

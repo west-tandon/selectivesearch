@@ -8,15 +8,14 @@ import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.data.features.Features._
-import edu.nyu.tandon.search.selective.learn.LearnPayoffs.{BucketColumn, FeaturesColumn, QueryColumn, ShardColumn}
+import edu.nyu.tandon.search.selective.learn.LearnPayoffs.FeaturesColumn
 import edu.nyu.tandon.search.selective.learn.PredictPayoffs.PredictedLabelColumn
-import edu.nyu.tandon.utils.Lines
 import org.apache.commons.io.FileUtils
 import org.apache.spark.ml.feature.VectorAssembler
-import org.apache.spark.ml.linalg.{Vector, Vectors}
+import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.ml.regression.RandomForestRegressionModel
-import org.apache.spark.sql._
 import org.apache.spark.sql.SaveMode.Overwrite
+import org.apache.spark.sql._
 
 import scala.language.implicitConversions
 
@@ -84,12 +83,12 @@ object Payoffs {
     val bucketData = Spark.session.createDataFrame(for (b <- 0 until properties.bucketCount) yield (b, b))
       .withColumnRenamed("_1", BID)
       .drop("_2")
-    val raw = features.queryFeatures
-      .join(features.shardFeatures, QID)
+    val raw = features.payoffQueryFeatures
+      .join(features.payoffShardFeatures, QID)
       .join(bucketData)
 
-    val featureColumns = properties.queryPayoffFeaturesNames ++
-      properties.shardPayoffFeaturesNames ++ List(BID)
+    val featureColumns = properties.queryFeatures("payoff") ++
+      properties.shardFeatures("payoff") ++ List(BID)
     val featureAssembler = new VectorAssembler()
       .setInputCols(featureColumns.toArray)
       .setOutputCol(FeaturesColumn)
