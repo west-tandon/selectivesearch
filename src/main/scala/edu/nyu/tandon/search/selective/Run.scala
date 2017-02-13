@@ -1,6 +1,7 @@
 package edu.nyu.tandon.search.selective
 
 import edu.nyu.tandon.search.selective.learn.{LearnPayoffs, PredictCosts, PredictPayoffs, TrainCosts}
+import edu.nyu.tandon.search.selective.optimize.PrecisionOptimizer
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -19,7 +20,9 @@ object Run {
     (Overlap.CommandName, Overlap.main),
     (Time2Cost.CommandName, Time2Cost.main),
     (Selection2Time.CommandName, Selection2Time.main),
-    (Penalize.CommandName, Penalize.main)
+    (Penalize.CommandName, Penalize.main),
+    (PrecisionOptimizer.CommandName, PrecisionOptimizer.main),
+    (Titles2Map.CommandName, Titles2Map.main)
   )
 
   def printUsage(): Unit = {
