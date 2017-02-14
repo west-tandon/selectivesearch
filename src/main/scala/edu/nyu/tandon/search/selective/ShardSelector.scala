@@ -124,7 +124,7 @@ object ShardSelector extends LazyLogging {
         val selection = new ShardSelector(experiment, strategy).selection
         writeSelection(selection, budgetBasename)
 
-        val selected = resultsByShardsAndBucketsFromBasename(config.basename)
+        val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)
           .select(selection).toSeq
         writeSelected(selected, budgetBasename)
 

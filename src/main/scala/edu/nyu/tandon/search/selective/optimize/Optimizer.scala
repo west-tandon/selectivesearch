@@ -1,22 +1,17 @@
 package edu.nyu.tandon.search.selective.optimize
 
-import java.io.{FileInputStream, FileNotFoundException, ObjectInputStream}
-
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
-import edu.nyu.tandon.search.selective.optimize.PrecisionOptimizer.Type.Type
+import edu.nyu.tandon.search.selective.optimize.Type.Type
 import edu.nyu.tandon.utils.Lines._
 import edu.nyu.tandon.utils.TupleIterators._
 import edu.nyu.tandon.utils.{Lines, ZippedIterator}
-import edu.nyu.tandon.utils.WriteLineIterator._
 import scopt.OptionParser
 
 import scala.annotation.tailrec
-import scala.collection.immutable.HashMap
 import scala.collection.mutable
-import scala.util.Try
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -31,6 +26,20 @@ object Optimizer {
       if (x._2 >= targetPrecision) List(x)
       else x :: takeUntilFirstSatisfiedPrecision(y :: s, targetPrecision)
     case s => s
+  }
+
+  def optimizerData(basename: String, features: Features, reference: Seq[Seq[Int]]) = {
+    ZippedIterator(for (shard <- 0 until features.shardCount) yield
+      ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
+        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long]
+        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double]
+        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double]
+        for ((res, ref, score, cost) <- results.zip(reference.iterator).flatZip(scores).flatZip(costs)) yield {
+          Bucket((for ((r, s) <- res.zip(score)) yield {
+            Result(s, ref.contains(r))
+          }).toList, cost)
+        }
+      }).map(l => new Shard(l.toList)))
   }
 
 }
@@ -70,56 +79,35 @@ class PrecisionOptimizer(val shards: List[Shard],
 
 }
 
+object Type extends Enumeration {
+  type Type = Value
+  val relevance, overlap = Value
+
+  implicit val typeRead: scopt.Read[Type.Value] =
+    scopt.Read.reads(Type.withName)
+}
+
 object PrecisionOptimizer extends LazyLogging {
 
   val CommandName = "optimize-precision"
 
-  object Type extends Enumeration {
-    type Type = Value
-    val relevance, overlap = Value
-  }
-
-  implicit val typeRead: scopt.Read[Type.Value] =
-    scopt.Read.reads(Type.withName)
-
   def overlapOptimizers(basename: String, budget: Double, k: Int) = {
     val features = Features.get(Properties.get(basename))
-    val reference = features.baseResults.toList
-
-    ZippedIterator(for (shard <- 0 until features.shardCount) yield
-      ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
-        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long]
-        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double]
-        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double]
-        for ((res, ref, score, cost) <- results.zip(reference.iterator).flatZip(scores).flatZip(costs)) yield {
-          Bucket((for ((r, s) <- res.zip(score)) yield {
-            Result(s, ref.contains(r))
-          }).toList, cost)
-        }
-      }).map(l => new Shard(l.toList))).map(s => new PrecisionOptimizer(s.toList, budget, k))
+    val reference = features.baseResults.toList.map(_.map(_.toInt))
+    Optimizer.optimizerData(basename, features, reference).map(s => new PrecisionOptimizer(s.toList, budget, k))
   }
 
   def relevanceOptimizers(basename: String, budget: Double, k: Int) = {
     val features = Features.get(Properties.get(basename))
     val reference = features.qrelsReference
-
-    ZippedIterator(for (shard <- 0 until features.shardCount) yield
-      ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
-        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long]
-        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double]
-        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double]
-        for ((res, ref, score, cost) <- results.zip(reference.iterator).flatZip(scores).flatZip(costs)) yield {
-          Bucket((for ((r, s) <- res.zip(score)) yield {
-            Result(s, ref.contains(r))
-          }).toList, cost)
-        }
-      }).map(l => new Shard(l.toList))).map(s => new PrecisionOptimizer(s.toList, budget, k))
+    Optimizer.optimizerData(basename, features, reference).map(s => new PrecisionOptimizer(s.toList, budget, k))
   }
 
   def main(args: Array[String]): Unit = {
 
     case class Config(basename: String = null,
                       budget: Double = 0.0,
+                      budgetStr: String = null,
                       k: Int = 0,
                       operation: Type = null)
 
@@ -134,8 +122,8 @@ object PrecisionOptimizer extends LazyLogging {
         .text("the prefix of the files")
         .required()
 
-      opt[Double]('b', "budget")
-        .action((x, c) => c.copy(budget = x))
+      opt[String]('b', "budget")
+        .action((x, c) => c.copy(budgetStr = x, budget = doubleConverter(x)))
         .text("the budget for queries")
         .required()
 
@@ -154,8 +142,13 @@ object PrecisionOptimizer extends LazyLogging {
           case Type.relevance => relevanceOptimizers(config.basename, config.budget, config.k)
         }
 
-        val optimized = (for (optimizer <- optimizers) yield optimizer.optimize().shards.map(_.numSelected)).toStream
-        ShardSelector.writeSelection(optimized, s"${config.basename}$BudgetIndicator[opt]")
+        val budgetBasename = s"${config.basename}$BudgetIndicator[${config.budgetStr}]"
+
+        val selection = (for (optimizer <- optimizers) yield optimizer.optimize().shards.map(_.numSelected)).toStream
+        ShardSelector.writeSelection(selection, budgetBasename)
+        val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)
+          .select(selection).toSeq
+        ShardSelector.writeSelected(selected, budgetBasename)
 
       case None =>
     }
@@ -195,6 +188,76 @@ class BudgetOptimizer(val shards: List[Shard],
     val selected = select()
     if (Optimizer.calcPrecision(selected.topResults, k) >= targetPrecision) selected
     else selected.optimize()
+  }
+
+}
+
+object BudgetOptimizer extends LazyLogging {
+
+  val CommandName = "optimize-budget"
+
+  def overlapOptimizers(basename: String, targetPrecision: Double, k: Int) = {
+    val features = Features.get(Properties.get(basename))
+    val reference = features.baseResults.toList.map(_.map(_.toInt))
+    Optimizer.optimizerData(basename, features, reference).map(s => new BudgetOptimizer(s.toList, targetPrecision, k))
+  }
+
+  def relevanceOptimizers(basename: String, targetPrecision: Double, k: Int) = {
+    val features = Features.get(Properties.get(basename))
+    val reference = features.qrelsReference
+    Optimizer.optimizerData(basename, features, reference).map(s => new BudgetOptimizer(s.toList, targetPrecision, k))
+  }
+
+  def main(args: Array[String]): Unit = {
+
+    case class Config(basename: String = null,
+                      budget: Double = 0.0,
+                      budgetStr: String = null,
+                      k: Int = 0,
+                      operation: Type = null)
+
+    val parser = new OptionParser[Config](CommandName) {
+
+      arg[Type]("<type>")
+        .action((x, c) => c.copy(operation = x))
+        .required()
+
+      arg[String]("<basename>")
+        .action((x, c) => c.copy(basename = x))
+        .text("the prefix of the files")
+        .required()
+
+      opt[String]('p', "precision")
+        .action((x, c) => c.copy(budgetStr = x, budget = doubleConverter(x)))
+        .text("the target precision")
+        .required()
+
+      opt[Int]('k', "k")
+        .action((x, c) => c.copy(k = x))
+        .text("the number of top results to optimize")
+        .required()
+
+    }
+
+    parser.parse(args, Config()) match {
+      case Some(config) =>
+
+        val optimizers = config.operation match {
+          case Type.overlap => overlapOptimizers(config.basename, config.budget, config.k)
+          case Type.relevance => relevanceOptimizers(config.basename, config.budget, config.k)
+        }
+
+        val budgetBasename = s"${config.basename}$ThresholdIndicator[${config.budgetStr}]"
+
+        val selection = (for (optimizer <- optimizers) yield optimizer.optimize().shards.map(_.numSelected)).toStream
+        ShardSelector.writeSelection(selection, budgetBasename)
+        val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)
+          .select(selection).toSeq
+        ShardSelector.writeSelected(selected, budgetBasename)
+
+      case None =>
+    }
+
   }
 
 }

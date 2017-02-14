@@ -1,7 +1,7 @@
 package edu.nyu.tandon.search.selective.optimize
 
 import edu.nyu.tandon.search.selective.data.Properties
-import edu.nyu.tandon.search.selective.{BudgetIndicator, Titles2Map}
+import edu.nyu.tandon.search.selective.{BudgetIndicator, ThresholdIndicator, Titles2Map}
 import edu.nyu.tandon.test.BaseFunSuite
 import edu.nyu.tandon.utils.Lines
 import edu.nyu.tandon.utils.Lines._
@@ -324,6 +324,11 @@ class OptimizerTest extends BaseFunSuite {
     List("3").write(s"$tmpDir/$basename#0#2.results.global")
     List("4").write(s"$tmpDir/$basename#0#3.results.global")
 
+    List("1").write(s"$tmpDir/$basename#0#0.results.local")
+    List("2").write(s"$tmpDir/$basename#0#1.results.local")
+    List("3").write(s"$tmpDir/$basename#0#2.results.local")
+    List("4").write(s"$tmpDir/$basename#0#3.results.local")
+
     List("1.0").write(s"$tmpDir/$basename#0#0.results.scores")
     List("1.2").write(s"$tmpDir/$basename#0#1.results.scores")
     List("1.3").write(s"$tmpDir/$basename#0#2.results.scores")
@@ -339,6 +344,11 @@ class OptimizerTest extends BaseFunSuite {
     List("6").write(s"$tmpDir/$basename#1#1.results.global")
     List("7").write(s"$tmpDir/$basename#1#2.results.global")
     List("8").write(s"$tmpDir/$basename#1#3.results.global")
+
+    List("5").write(s"$tmpDir/$basename#1#0.results.local")
+    List("6").write(s"$tmpDir/$basename#1#1.results.local")
+    List("7").write(s"$tmpDir/$basename#1#2.results.local")
+    List("8").write(s"$tmpDir/$basename#1#3.results.local")
 
     List("0.9").write(s"$tmpDir/$basename#1#0.results.scores")
     List("1.2").write(s"$tmpDir/$basename#1#1.results.scores")
@@ -364,8 +374,10 @@ class OptimizerTest extends BaseFunSuite {
         "--budget", "10",
         "-k", "4"
       ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[opt].selection").ofSeq[Int]
+      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
         .next() should contain theSameElementsInOrderAs List(4, 0)
+      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selected.docs").ofSeq[Int]
+        .next() should contain theSameElementsInOrderAs List(4, 3, 2, 1)
     }
   }
 
@@ -377,8 +389,10 @@ class OptimizerTest extends BaseFunSuite {
         "--budget", "2.001",
         "-k", "4"
       ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[opt].selection").ofSeq[Int]
+      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.001].selection").ofSeq[Int]
         .next() should contain theSameElementsInOrderAs List(1, 1)
+      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.001].selected.docs").ofSeq[Int]
+        .next() should contain theSameElementsInOrderAs List(1, 5)
     }
   }
 
@@ -390,7 +404,7 @@ class OptimizerTest extends BaseFunSuite {
         "--budget", "2.002",
         "-k", "4"
       ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[opt].selection").ofSeq[Int]
+      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.002].selection").ofSeq[Int]
         .next() should contain theSameElementsInOrderAs List(4, 0)
     }
   }
@@ -403,7 +417,7 @@ class OptimizerTest extends BaseFunSuite {
         "--budget", "10",
         "-k", "4"
       ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[opt].selection").ofSeq[Int]
+      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
         .next() should contain theSameElementsInOrderAs List(4, 0)
     }
   }
@@ -416,7 +430,7 @@ class OptimizerTest extends BaseFunSuite {
         "--budget", "2.001",
         "-k", "4"
       ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[opt].selection").ofSeq[Int]
+      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.001].selection").ofSeq[Int]
         .next() should contain theSameElementsInOrderAs List(1, 1)
     }
   }
@@ -429,7 +443,7 @@ class OptimizerTest extends BaseFunSuite {
         "--budget", "2.002",
         "-k", "4"
       ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[opt].selection").ofSeq[Int]
+      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.002].selection").ofSeq[Int]
         .next() should contain theSameElementsInOrderAs List(4, 0)
     }
   }
@@ -442,8 +456,38 @@ class OptimizerTest extends BaseFunSuite {
         "--budget", "10",
         "-k", "4"
       ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[opt].selection").ofSeq[Int]
+      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
         .next() should contain theSameElementsInOrderAs List(4, 0)
+    }
+  }
+
+  test("BudgetOptimizer.main: overlap, t=1") {
+    new ShardsOnDisk {
+      BudgetOptimizer.main(Array(
+        "overlap",
+        s"$tmpDir/$basename",
+        "--precision", "1",
+        "-k", "4"
+      ))
+      Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[1].selection").ofSeq[Int]
+        .next() should contain theSameElementsInOrderAs List(4, 4)
+      Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[1].selected.docs").ofSeq[Int]
+        .next() should contain theSameElementsInOrderAs List(4, 8, 3, 7, 2, 6, 1, 5)
+    }
+  }
+
+  test("BudgetOptimizer.main: overlap, t=0.5") {
+    new ShardsOnDisk {
+      BudgetOptimizer.main(Array(
+        "overlap",
+        s"$tmpDir/$basename",
+        "--precision", "0.5",
+        "-k", "4"
+      ))
+      Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[0.5].selection").ofSeq[Int]
+        .next() should contain theSameElementsInOrderAs List(1, 1)
+      Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[0.5].selected.docs").ofSeq[Int]
+        .next() should contain theSameElementsInOrderAs List(1, 5)
     }
   }
 
