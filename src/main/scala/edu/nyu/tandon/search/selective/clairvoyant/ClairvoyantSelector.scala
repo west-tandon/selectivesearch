@@ -1,5 +1,6 @@
 package edu.nyu.tandon.search.selective.clairvoyant
 
+import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.{ShardSelector, data, _}
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
@@ -53,7 +54,7 @@ case class ClairvoyantSelector(shards: List[Shard],
 
 }
 
-object ClairvoyantSelector {
+object ClairvoyantSelector extends LazyLogging {
 
   val CommandName = "select-opt"
 
@@ -105,11 +106,15 @@ object ClairvoyantSelector {
     parser.parse(args, Config()) match {
       case Some(config) =>
 
+        logger.info("creating selectors")
         val selectorsForQueries = selectors(config.basename, config.budget, config.k)
         val budgetBasename = s"${config.basename}$BudgetIndicator[${config.budgetStr}]"
 
-        val selection = (for (selector <- selectorsForQueries)
-          yield selector.select().shards.map(_.numSelected)).toStream
+        val selection = (for ((selector, idx) <- selectorsForQueries.zipWithIndex)
+          yield {
+            logger.info("selection for query %d".format(idx))
+            selector.select().shards.map(_.numSelected)
+          }).toStream
         ShardSelector.writeSelection(selection, budgetBasename)
         val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)
           .select(selection).toSeq
