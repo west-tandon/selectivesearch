@@ -285,7 +285,7 @@ class OptimizerTest extends BaseFunSuite {
          "buckets.count = 4",
          "k = 4").write(s"$tmpDir/$basename.properties")
 
-    List("1 3 4 5 6").write(s"$tmpDir/$features.results.global")
+    List("1 3 4 5 6", "1 3 4 5 6").write(s"$tmpDir/$features.results.global")
     List("10", "10").write(s"$tmpDir/$features.sizes")
 
     List(
@@ -319,46 +319,46 @@ class OptimizerTest extends BaseFunSuite {
     ).write(s"$tmpDir/$features.qrels")
 
 
-    List("1").write(s"$tmpDir/$basename#0#0.results.global")
-    List("2").write(s"$tmpDir/$basename#0#1.results.global")
-    List("3").write(s"$tmpDir/$basename#0#2.results.global")
-    List("4").write(s"$tmpDir/$basename#0#3.results.global")
+    List("1", "1").write(s"$tmpDir/$basename#0#0.results.global")
+    List("2", "2").write(s"$tmpDir/$basename#0#1.results.global")
+    List("3", "3").write(s"$tmpDir/$basename#0#2.results.global")
+    List("4", "4").write(s"$tmpDir/$basename#0#3.results.global")
 
-    List("1").write(s"$tmpDir/$basename#0#0.results.local")
-    List("2").write(s"$tmpDir/$basename#0#1.results.local")
-    List("3").write(s"$tmpDir/$basename#0#2.results.local")
-    List("4").write(s"$tmpDir/$basename#0#3.results.local")
+    List("1", "1").write(s"$tmpDir/$basename#0#0.results.local")
+    List("2", "2").write(s"$tmpDir/$basename#0#1.results.local")
+    List("3", "3").write(s"$tmpDir/$basename#0#2.results.local")
+    List("4", "4").write(s"$tmpDir/$basename#0#3.results.local")
 
-    List("1.0").write(s"$tmpDir/$basename#0#0.results.scores")
-    List("1.2").write(s"$tmpDir/$basename#0#1.results.scores")
-    List("1.3").write(s"$tmpDir/$basename#0#2.results.scores")
-    List("1.5").write(s"$tmpDir/$basename#0#3.results.scores")
+    List("1.0", "1.0").write(s"$tmpDir/$basename#0#0.results.scores")
+    List("1.2", "1.2").write(s"$tmpDir/$basename#0#1.results.scores")
+    List("1.3", "1.3").write(s"$tmpDir/$basename#0#2.results.scores")
+    List("1.5", "1.5").write(s"$tmpDir/$basename#0#3.results.scores")
 
-    List("1.0").write(s"$tmpDir/$basename#0#0.cost")
-    List("1.0").write(s"$tmpDir/$basename#0#1.cost")
-    List("0.001").write(s"$tmpDir/$basename#0#2.cost")
-    List("0.001").write(s"$tmpDir/$basename#0#3.cost")
+    List("1.0", "1.0").write(s"$tmpDir/$basename#0#0.cost")
+    List("1.0", "1.0").write(s"$tmpDir/$basename#0#1.cost")
+    List("0.001", "0.001").write(s"$tmpDir/$basename#0#2.cost")
+    List("0.001", "0.001").write(s"$tmpDir/$basename#0#3.cost")
 
 
-    List("5").write(s"$tmpDir/$basename#1#0.results.global")
-    List("6").write(s"$tmpDir/$basename#1#1.results.global")
-    List("7").write(s"$tmpDir/$basename#1#2.results.global")
-    List("8").write(s"$tmpDir/$basename#1#3.results.global")
+    List("5", "5").write(s"$tmpDir/$basename#1#0.results.global")
+    List("6", "6").write(s"$tmpDir/$basename#1#1.results.global")
+    List("7", "7").write(s"$tmpDir/$basename#1#2.results.global")
+    List("8", "8").write(s"$tmpDir/$basename#1#3.results.global")
 
-    List("5").write(s"$tmpDir/$basename#1#0.results.local")
-    List("6").write(s"$tmpDir/$basename#1#1.results.local")
-    List("7").write(s"$tmpDir/$basename#1#2.results.local")
-    List("8").write(s"$tmpDir/$basename#1#3.results.local")
+    List("5", "5").write(s"$tmpDir/$basename#1#0.results.local")
+    List("6", "6").write(s"$tmpDir/$basename#1#1.results.local")
+    List("7", "7").write(s"$tmpDir/$basename#1#2.results.local")
+    List("8", "8").write(s"$tmpDir/$basename#1#3.results.local")
 
-    List("0.9").write(s"$tmpDir/$basename#1#0.results.scores")
-    List("1.2").write(s"$tmpDir/$basename#1#1.results.scores")
-    List("1.3").write(s"$tmpDir/$basename#1#2.results.scores")
-    List("1.5").write(s"$tmpDir/$basename#1#3.results.scores")
+    List("0.9", "0.9").write(s"$tmpDir/$basename#1#0.results.scores")
+    List("1.2", "1.2").write(s"$tmpDir/$basename#1#1.results.scores")
+    List("1.3", "1.3").write(s"$tmpDir/$basename#1#2.results.scores")
+    List("1.5", "1.5").write(s"$tmpDir/$basename#1#3.results.scores")
 
-    List("1.0").write(s"$tmpDir/$basename#1#0.cost")
-    List("1.0").write(s"$tmpDir/$basename#1#1.cost")
-    List("0.001").write(s"$tmpDir/$basename#1#2.cost")
-    List("0.001").write(s"$tmpDir/$basename#1#3.cost")
+    List("1.0", "1.0").write(s"$tmpDir/$basename#1#0.cost")
+    List("1.0", "1.0").write(s"$tmpDir/$basename#1#1.cost")
+    List("0.001", "0.001").write(s"$tmpDir/$basename#1#2.cost")
+    List("0.001", "0.001").write(s"$tmpDir/$basename#1#3.cost")
 
   }
 
@@ -374,10 +374,12 @@ class OptimizerTest extends BaseFunSuite {
         "--budget", "10",
         "-k", "4"
       ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(4, 0)
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selected.docs").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(4, 3, 2, 1)
+      val selection = Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
+      selection.next() should contain theSameElementsInOrderAs List(4, 0)
+      selection.next() should contain theSameElementsInOrderAs List(4, 0)
+      val selected = Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selected.docs").ofSeq[Int]
+      selected.next() should contain theSameElementsInOrderAs List(4, 3, 2, 1)
+      selected.next() should contain theSameElementsInOrderAs List(4, 3, 2, 1)
     }
   }
 

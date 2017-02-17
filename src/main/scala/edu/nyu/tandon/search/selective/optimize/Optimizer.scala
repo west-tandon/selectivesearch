@@ -144,7 +144,8 @@ object PrecisionOptimizer extends LazyLogging {
 
         val budgetBasename = s"${config.basename}$BudgetIndicator[${config.budgetStr}]"
 
-        val selection = (for (optimizer <- optimizers) yield optimizer.optimize().shards.map(_.numSelected)).toStream
+        val selection = (for (optimizer <- optimizers)
+          yield optimizer.optimize().shards.map(_.numSelected)).toStream
         ShardSelector.writeSelection(selection, budgetBasename)
         val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)
           .select(selection).toSeq
