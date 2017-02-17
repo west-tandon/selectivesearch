@@ -15,11 +15,12 @@ import scopt.OptionParser
   */
 case class ClairvoyantSelector(shards: List[Shard],
                           budget: Double,
-                          k: Int) {
+                          k: Int) extends LazyLogging {
 
   assert(k > 0, "k must be > 0")
 
   def select(): ClairvoyantSelector = {
+    logger.debug(s"select: shards.head.numSelected=${shards.head.numSelected}, shards.tail.length=${shards.tail.length}")
     val (withRemainingShards, withRemainingBuckets) = shards match {
       case Nil => (None, None)
       case shard :: tail =>
