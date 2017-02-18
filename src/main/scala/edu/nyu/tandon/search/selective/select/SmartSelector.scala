@@ -1,81 +1,68 @@
-package edu.nyu.tandon.search.selective.clairvoyant
+package edu.nyu.tandon.search.selective.select
 
 import com.typesafe.scalalogging.LazyLogging
-import edu.nyu.tandon.search.selective.{ShardSelector, data, _}
+import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
-import edu.nyu.tandon.takeUntilOrNil
-import edu.nyu.tandon.utils.{Lines, ZippedIterator}
+import edu.nyu.tandon.search.selective.{ShardSelector, data, _}
 import edu.nyu.tandon.utils.Lines._
-import edu.nyu.tandon.utils.TupleIterators._
+import edu.nyu.tandon.utils.{Lines, ZippedIterator}
 import scopt.OptionParser
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-case class ClairvoyantSelector(shards: List[Shard],
-                          budget: Double,
-                          k: Int) extends LazyLogging {
+case class SmartSelector(shards: List[Shard],
+                         budget: Double,
+                         k: Int) {
 
   assert(k > 0, "k must be > 0")
 
-  def select(): ClairvoyantSelector = {
-    logger.trace(s"select: shards.head.numSelected=${shards.head.numSelected}, shards.tail.length=${shards.tail.length}")
+  def select(threshold: Double = 0.0): SmartSelector = {
     val (withRemainingShards, withRemainingBuckets) = shards match {
       case Nil => (None, None)
       case shard :: tail =>
         val wrs = tail match {
           case Nil => None
           case _ =>
-            val remainingShards = ClairvoyantSelector(tail, budget - shard.costOfSelected, k).select()
-            Some(ClairvoyantSelector(shard :: remainingShards.shards, remainingShards.budget, k))
+            val remainingShards = SmartSelector(tail, budget - shard.costOfSelected, k).select()
+            Some(SmartSelector(shard :: remainingShards.shards, remainingShards.budget, k))
         }
-        val wrb = shard.nextAvailable match {
+        val wrb = shard.nextAvailable(threshold) match {
           case None => None
           case Some(s) =>
             if (budget - s.costOfSelected < 0) None
-            else Some(ClairvoyantSelector(s :: tail, budget, k).select())
+            else Some(SmartSelector(s :: tail, budget, k).select())
         }
         (wrs, wrb)
     }
     Array(withRemainingBuckets, withRemainingShards, Some(this)).sortBy{
       case None => -1.0
-      case Some(c) => c.overlap
+      case Some(c) => c.impact
     }.last.get
   }
 
-  def overlap: Double = {
-    val selectedResults = shards.flatMap(s => s.buckets.take(s.numSelected).flatMap(_.results))
-    val hitCount = selectedResults
-      .sortBy(_.score)(Ordering[Double].reverse)
-      .take(k)
-      .count(_.hit)
-    hitCount.toDouble / k
-  }
+  def impact: Double = shards.flatMap(s => s.buckets.take(s.numSelected).map(_.impact)).sum
 
 }
 
-object ClairvoyantSelector extends LazyLogging {
+object SmartSelector extends LazyLogging {
 
-  val CommandName = "select-opt"
+  val CommandName = "select"
 
-  def selectors(basename: String, budget: Double, k: Int): List[ClairvoyantSelector] = {
+  def selectors(basename: String, budget: Double, k: Int): List[SmartSelector] = {
     val features = Features.get(Properties.get(basename))
-    val reference = features.baseResults.toList.map(_.map(_.toInt))
 
     val data = ZippedIterator(for (shard <- 0 until features.shardCount) yield
       ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
-        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long]
-        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double]
+        val payoffs = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Long]
         val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double]
-        for ((res, ref, score, cost) <- results.zip(reference.iterator).flatZip(scores).flatZip(costs)) yield {
-          Bucket((for ((r, s) <- res.zip(score)) yield {
-            Result(s, ref.take(k).contains(r))
-          }).toList, cost)
+        for ((pay, cost) <- payoffs.zip(costs)) yield {
+          Bucket(pay, cost)
         }
-      }).zipWithIndex.map{ case (l, id) => Shard(id, l.toList)})
+      }).zipWithIndex.map{ case (l, id) => Shard(l.toList)})
 
-    data.map(s => ClairvoyantSelector(s.toList, budget, k)).toList
+    data.map(s => SmartSelector(s.toList, budget, k)).toList
   }
 
   def main(args: Array[String]): Unit = {
@@ -114,7 +101,11 @@ object ClairvoyantSelector extends LazyLogging {
         val selection = (for ((selector, idx) <- selectorsForQueries.zipWithIndex)
           yield {
             logger.info(s"selection for query $idx")
-            selector.select().shards.map(_.numSelected)
+            val threshold = selector.shards.toArray.flatMap(_.buckets.map(_.impact))
+              .sorted(Ordering[Double].reverse)
+              .take(config.k)
+              .last
+            selector.select(threshold).shards.map(_.numSelected)
           }).toStream
         ShardSelector.writeSelection(selection, budgetBasename)
         val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)
@@ -128,38 +119,25 @@ object ClairvoyantSelector extends LazyLogging {
 
 }
 
-case class Shard(id: Int,
-                 buckets: List[Bucket],
+case class Shard(buckets: List[Bucket],
                  numSelected: Int = 0,
                  costOfSelected: Double = 0.0) {
 
   val numBuckets = buckets.length
 
-  def nextAvailable: Option[Shard] = {
-    val taken = takeUntilOrNil(buckets.drop(numSelected))(_.numHits > 0)
+  def nextAvailable(threshold: Double = 0.0): Option[Shard] = {
+    val taken = takeUntilOrNil(buckets.drop(numSelected))(_.impact > threshold)
     if (taken == Nil) None
     else {
       val (selected, cost) = taken.foldLeft((numSelected, costOfSelected)) {
         case ((selectedAcc, costAcc), bucket) => (selectedAcc + 1, costAcc + bucket.cost)
       }
-      Some(Shard(id, buckets, selected, cost))
+      Some(Shard(buckets, selected, cost))
     }
   }
 
 }
 
-case class Bucket(results: List[Result],
+case class Bucket(impact: Double,
                   cost: Double) {
-  val numResults = results.length
-  lazy val numHits = results.count(_.hit)
-}
-
-/**
-  *
-  * @param score  score of the document
-  * @param hit    whether the result is counted as positive hit in precision
-  *               (e.g., labeled relevant or in top-k of exhaustive search)
-  */
-case class Result(score: Double,
-                  hit: Boolean) {
 }
