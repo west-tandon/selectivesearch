@@ -123,7 +123,7 @@ object ClairvoyantSelector extends LazyLogging {
         val selection = (for ((selector, idx) <- selectorsForQueries.zipWithIndex)
           yield {
             logger.info(s"selection for query $idx")
-            selector.selected.shards.map(_.numSelected)
+            selector.select().shards.map(_.numSelected)
           }).toStream
         ShardSelector.writeSelection(selection, budgetBasename)
         val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)

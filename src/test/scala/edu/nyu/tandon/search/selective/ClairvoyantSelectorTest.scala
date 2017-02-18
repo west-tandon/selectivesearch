@@ -81,17 +81,17 @@ class ClairvoyantSelectorTest extends BaseFunSuite {
   test("ClairvoyantSelector.select") {
     new C {
       {
-        val selected = ClairvoyantSelector(shards, budget = 3.0, k = 4).selected
+        val selected = ClairvoyantSelector(shards, budget = 3.0, k = 4).select()
         selected.shards.map(_.numSelected) should contain theSameElementsInOrderAs List(1, 0, 2)
         selected.overlap shouldBe 0.75
       }
       {
-        val selected = ClairvoyantSelector(shards, budget = 2.0, k = 4).selected
+        val selected = ClairvoyantSelector(shards, budget = 2.0, k = 4).select()
         selected.shards.map(_.numSelected) should contain theSameElementsInOrderAs List(0, 0, 2)
         selected.overlap shouldBe 0.5
       }
       {
-        val selected = ClairvoyantSelector(shards, budget = 4.002, k = 6).selected
+        val selected = ClairvoyantSelector(shards, budget = 4.002, k = 6).select()
         selected.shards.map(_.numSelected) should contain theSameElementsInOrderAs List(4, 0, 2)
         selected.overlap shouldBe (0.833 +- 0.001)
       }
