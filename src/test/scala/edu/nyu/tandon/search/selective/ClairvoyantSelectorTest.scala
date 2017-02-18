@@ -23,13 +23,19 @@ class ClairvoyantSelectorTest extends BaseFunSuite {
   }
 
   trait S {
-    val s1 = new Shard(List(
+    val s1 = new Shard(id = 0, List(
       Bucket(List(Result(1.0, hit = true)), 1.0), // already selected
       Bucket(List(Result(1.2, hit = false)), 1.0),
       Bucket(List(Result(1.3, hit = true)), 0.001),
       Bucket(List(Result(1.5, hit = true)), 0.001)
     ), numSelected = 1, costOfSelected = 1.0)
-    val s2 = new Shard(List(
+    val s2 = new Shard(id = 1, List(
+      Bucket(List(Result(1.0, hit = false)), 1.0),
+      Bucket(List(Result(1.2, hit = false)), 1.0),
+      Bucket(List(Result(1.3, hit = false)), 0.001),
+      Bucket(List(Result(1.5, hit = false)), 0.001)
+    ))
+    val s3 = new Shard(id = 2, List(
       Bucket(List(Result(0.9, hit = true)), 1.0), // already selected
       Bucket(List(Result(1.2, hit = true)), 1.0),
       Bucket(List(Result(1.3, hit = false)), 0.001),
@@ -39,8 +45,9 @@ class ClairvoyantSelectorTest extends BaseFunSuite {
 
   trait C extends S {
     val shards = List(
-      Shard(s1.buckets),
-      Shard(s2.buckets)
+      Shard(id = 0, s1.buckets),
+      s2,
+      Shard(id = 2, s3.buckets)
     )
   }
 
@@ -56,7 +63,7 @@ class ClairvoyantSelectorTest extends BaseFunSuite {
 
       shard2.nextAvailable shouldBe None
 
-      val Some(shard3) = s2.nextAvailable
+      val Some(shard3) = s3.nextAvailable
       shard3.numSelected shouldBe 2
       shard3.costOfSelected shouldBe 2.0
 
@@ -66,26 +73,26 @@ class ClairvoyantSelectorTest extends BaseFunSuite {
 
   test("ClairvoyantSelector.overlap") {
     new S {
-      ClairvoyantSelector(List(s1, s2), 0, 4).overlap shouldBe 0.5
-      ClairvoyantSelector(List(Shard(s1.buckets, 4, 2.002), s2), 0, 4).overlap shouldBe 0.75
+      ClairvoyantSelector(List(s1, s3), 0, 4).overlap shouldBe 0.5
+      ClairvoyantSelector(List(Shard(id = 1, s1.buckets, 4, 2.002), s3), 0, 4).overlap shouldBe 0.75
     }
   }
 
   test("ClairvoyantSelector.select") {
     new C {
       {
-        val selected = ClairvoyantSelector(shards, budget = 3.0, k = 4).select()
-        selected.shards.map(_.numSelected) should contain theSameElementsInOrderAs List(1, 2)
+        val selected = ClairvoyantSelector(shards, budget = 3.0, k = 4).selected
+        selected.shards.map(_.numSelected) should contain theSameElementsInOrderAs List(1, 0, 2)
         selected.overlap shouldBe 0.75
       }
       {
-        val selected = ClairvoyantSelector(shards, budget = 2.0, k = 4).select()
-        selected.shards.map(_.numSelected) should contain theSameElementsInOrderAs List(0, 2)
+        val selected = ClairvoyantSelector(shards, budget = 2.0, k = 4).selected
+        selected.shards.map(_.numSelected) should contain theSameElementsInOrderAs List(0, 0, 2)
         selected.overlap shouldBe 0.5
       }
       {
-        val selected = ClairvoyantSelector(shards, budget = 4.002, k = 6).select()
-        selected.shards.map(_.numSelected) should contain theSameElementsInOrderAs List(4, 2)
+        val selected = ClairvoyantSelector(shards, budget = 4.002, k = 6).selected
+        selected.shards.map(_.numSelected) should contain theSameElementsInOrderAs List(4, 0, 2)
         selected.overlap shouldBe (0.833 +- 0.001)
       }
     }

@@ -19,6 +19,15 @@ case class ClairvoyantSelector(shards: List[Shard],
 
   assert(k > 0, "k must be > 0")
 
+  lazy val selected = {
+    val sel = ClairvoyantSelector(
+      shards.filter(_.buckets.flatMap(_.results).exists(_.hit)),
+      budget, k).select()
+    val selectedMap = sel.shards.map(s => (s.id, s)).toMap
+    val originalMap = shards.map(s => (s.id, s)).toMap
+    ClairvoyantSelector((for (id <- shards.indices) yield selectedMap.withDefault(originalMap)(id)).toList, budget, k)
+  }
+
   def select(): ClairvoyantSelector = {
     logger.debug(s"select: shards.head.numSelected=${shards.head.numSelected}, shards.tail.length=${shards.tail.length}")
     val (withRemainingShards, withRemainingBuckets) = shards match {
@@ -73,7 +82,7 @@ object ClairvoyantSelector extends LazyLogging {
             Result(s, ref.contains(r))
           }).toList, cost)
         }
-      }).map(l => new Shard(l.toList)))
+      }).zipWithIndex.map{ case (l, id) => Shard(id, l.toList)})
 
     data.map(s => ClairvoyantSelector(s.toList, budget, k)).toList
   }
@@ -113,8 +122,8 @@ object ClairvoyantSelector extends LazyLogging {
 
         val selection = (for ((selector, idx) <- selectorsForQueries.zipWithIndex)
           yield {
-            logger.info("selection for query %d".format(idx))
-            selector.select().shards.map(_.numSelected)
+            logger.info(s"selection for query $idx")
+            selector.selected.shards.map(_.numSelected)
           }).toStream
         ShardSelector.writeSelection(selection, budgetBasename)
         val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)
@@ -128,7 +137,8 @@ object ClairvoyantSelector extends LazyLogging {
 
 }
 
-case class Shard(buckets: List[Bucket],
+case class Shard(id: Int,
+                 buckets: List[Bucket],
                  numSelected: Int = 0,
                  costOfSelected: Double = 0.0) {
 
@@ -141,7 +151,7 @@ case class Shard(buckets: List[Bucket],
       val (selected, cost) = taken.foldLeft((numSelected, costOfSelected)) {
         case ((selectedAcc, costAcc), bucket) => (selectedAcc + 1, costAcc + bucket.cost)
       }
-      Some(Shard(buckets, selected, cost))
+      Some(Shard(id, buckets, selected, cost))
     }
   }
 
