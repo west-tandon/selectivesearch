@@ -79,7 +79,7 @@ object ClairvoyantSelector extends LazyLogging {
         val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double]
         for ((res, ref, score, cost) <- results.zip(reference.iterator).flatZip(scores).flatZip(costs)) yield {
           Bucket((for ((r, s) <- res.zip(score)) yield {
-            Result(s, ref.contains(r))
+            Result(s, ref.take(k).contains(r))
           }).toList, cost)
         }
       }).zipWithIndex.map{ case (l, id) => Shard(id, l.toList)})
