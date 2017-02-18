@@ -29,7 +29,7 @@ case class ClairvoyantSelector(shards: List[Shard],
   }
 
   def select(): ClairvoyantSelector = {
-    logger.debug(s"select: shards.head.numSelected=${shards.head.numSelected}, shards.tail.length=${shards.tail.length}")
+    logger.trace(s"select: shards.head.numSelected=${shards.head.numSelected}, shards.tail.length=${shards.tail.length}")
     val (withRemainingShards, withRemainingBuckets) = shards match {
       case Nil => (None, None)
       case shard :: tail =>
