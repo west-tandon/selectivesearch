@@ -3,6 +3,7 @@ package edu.nyu.tandon.search.selective
 import edu.nyu.tandon.search.selective.clairvoyant.ClairvoyantSelector
 import edu.nyu.tandon.search.selective.learn.{LearnPayoffs, PredictCosts, PredictPayoffs, TrainCosts}
 import edu.nyu.tandon.search.selective.optimize.{BudgetOptimizer, PrecisionOptimizer}
+import edu.nyu.tandon.search.selective.select.SmartSelector
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -25,7 +26,8 @@ object Run {
     (PrecisionOptimizer.CommandName, PrecisionOptimizer.main),
     (Titles2Map.CommandName, Titles2Map.main),
     (BudgetOptimizer.CommandName, BudgetOptimizer.main),
-    (ClairvoyantSelector.CommandName, ClairvoyantSelector.main)
+    (ClairvoyantSelector.CommandName, ClairvoyantSelector.main),
+    (SmartSelector.CommandName, SmartSelector.main)
   )
 
   def printUsage(): Unit = {
