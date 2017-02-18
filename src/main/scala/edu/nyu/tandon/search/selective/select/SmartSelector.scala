@@ -55,7 +55,7 @@ object SmartSelector extends LazyLogging {
 
     val data = ZippedIterator(for (shard <- 0 until features.shardCount) yield
       ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
-        val payoffs = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Long]
+        val payoffs = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double]
         val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double]
         for ((pay, cost) <- payoffs.zip(costs)) yield {
           Bucket(pay, cost)
