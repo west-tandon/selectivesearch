@@ -25,21 +25,32 @@ case class SmartSelector(shards: List[Shard],
         val wrs = tail match {
           case Nil => None
           case _ =>
-            val remainingShards = SmartSelector(tail, budget - shard.costOfSelected, k).select()
+            val remainingShards = SmartSelector(tail, budget - shard.costOfSelected, k).select(threshold)
             Some(SmartSelector(shard :: remainingShards.shards, remainingShards.budget, k))
         }
         val wrb = shard.nextAvailable(threshold) match {
           case None => None
           case Some(s) =>
             if (budget - s.costOfSelected < 0) None
-            else Some(SmartSelector(s :: tail, budget, k).select())
+            else Some(SmartSelector(s :: tail, budget, k).select(threshold))
         }
         (wrs, wrb)
     }
     Array(withRemainingBuckets, withRemainingShards, Some(this)).sortBy{
       case None => -1.0
-      case Some(c) => c.impact
+      case Some(s) => s.impact
     }.last.get
+  }
+
+  def threshold: Double = {
+    val allImpacts = shards.toArray.flatMap(_.buckets.map(_.impact))
+    if (allImpacts.length <= k) 0.0
+    else {
+      allImpacts
+        .sorted(Ordering[Double].reverse)
+        .take(k + 1)
+        .last
+    }
   }
 
   def impact: Double = shards.flatMap(s => s.buckets.take(s.numSelected).map(_.impact)).sum
@@ -101,11 +112,7 @@ object SmartSelector extends LazyLogging {
         val selection = (for ((selector, idx) <- selectorsForQueries.zipWithIndex)
           yield {
             logger.info(s"selection for query $idx")
-            val threshold = selector.shards.toArray.flatMap(_.buckets.map(_.impact))
-              .sorted(Ordering[Double].reverse)
-              .take(config.k)
-              .last
-            selector.select(threshold).shards.map(_.numSelected)
+            selector.select(selector.threshold).shards.map(_.numSelected)
           }).toStream
         ShardSelector.writeSelection(selection, budgetBasename)
         val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)
