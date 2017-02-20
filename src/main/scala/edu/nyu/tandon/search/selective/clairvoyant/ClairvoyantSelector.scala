@@ -65,9 +65,9 @@ object ClairvoyantSelector extends LazyLogging {
 
     val data = ZippedIterator(for (shard <- 0 until features.shardCount) yield
       ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
-        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long]
-        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double]
-        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double]
+        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long].toList.toIterator
+        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double].toList.toIterator
+        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double].toList.toIterator
         for ((res, ref, score, cost) <- results.zip(reference.iterator).flatZip(scores).flatZip(costs)) yield {
           Bucket((for ((r, s) <- res.zip(score)) yield {
             Result(s, ref.take(k).contains(r))
