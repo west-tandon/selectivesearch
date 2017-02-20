@@ -8,8 +8,8 @@ import scala.io.{BufferedSource, Source}
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class QueryShardExperiment(val payoffSources: Seq[Seq[BufferedSource]],
-                           val costSources: Seq[Seq[BufferedSource]],
+class QueryShardExperiment(val payoffs: Seq[Seq[Iterator[String]]],
+                           val costs: Seq[Seq[Iterator[String]]],
                            val features: Features) extends Iterable[QueryData] {
 
   def numberOfShards: Int = features.shardCount
@@ -17,8 +17,8 @@ class QueryShardExperiment(val payoffSources: Seq[Seq[BufferedSource]],
   override def iterator: Iterator[QueryData] = {
 
     /* Open iterators */
-    val payoffs = payoffSources map (_.map(_.getLines().toStream.iterator))
-    val costs = costSources map (_.map(_.getLines().toStream.iterator))
+//    val payoffs = payoffSources map (_.map(_.getLines().toStream.iterator))
+//    val costs = costSources map (_.map(_.getLines().toStream.iterator))
 
     new Iterator[QueryData] {
 
@@ -63,9 +63,9 @@ object QueryShardExperiment {
 
     new QueryShardExperiment(
       for (s <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield Source.fromFile(Path.toPayoffs(basename, s, b)),
+        for (b <- 0 until bucketCount) yield Source.fromFile(Path.toPayoffs(basename, s, b)).getLines().toStream.iterator,
       for (s <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield Source.fromFile(Path.toCosts(basename, s, b)),
+        for (b <- 0 until bucketCount) yield Source.fromFile(Path.toCosts(basename, s, b)).getLines().toStream.iterator,
       Features.get(basename)
     )
 
