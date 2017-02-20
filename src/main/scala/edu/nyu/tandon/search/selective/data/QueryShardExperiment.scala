@@ -2,6 +2,7 @@ package edu.nyu.tandon.search.selective.data
 
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.data.features.Features
+import edu.nyu.tandon.utils.Lines
 
 import scala.io.{BufferedSource, Source}
 
@@ -63,9 +64,9 @@ object QueryShardExperiment {
 
     new QueryShardExperiment(
       for (s <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield Source.fromFile(Path.toPayoffs(basename, s, b)).getLines().toStream.iterator,
+        for (b <- 0 until bucketCount) yield Lines.fromFile(Path.toPayoffs(basename, s, b)).toStream.iterator,
       for (s <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield Source.fromFile(Path.toCosts(basename, s, b)).getLines().toStream.iterator,
+        for (b <- 0 until bucketCount) yield Lines.fromFile(Path.toCosts(basename, s, b)).toStream.iterator,
       Features.get(basename)
     )
 
