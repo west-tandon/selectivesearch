@@ -17,8 +17,8 @@ class QueryShardExperiment(val payoffSources: Seq[Seq[BufferedSource]],
   override def iterator: Iterator[QueryData] = {
 
     /* Open iterators */
-    val payoffs = payoffSources map (_.map(_.getLines()))
-    val costs = costSources map (_.map(_.getLines()))
+    val payoffs = payoffSources map (_.map(_.getLines().toStream.iterator))
+    val costs = costSources map (_.map(_.getLines().toStream.iterator))
 
     new Iterator[QueryData] {
 
