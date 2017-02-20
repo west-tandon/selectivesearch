@@ -64,9 +64,9 @@ object QueryShardExperiment {
 
     new QueryShardExperiment(
       for (s <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield Lines.fromFile(Path.toPayoffs(basename, s, b)).toStream.iterator,
+        for (b <- 0 until bucketCount) yield Lines.fromFile(Path.toPayoffs(basename, s, b)).toList.iterator,
       for (s <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield Lines.fromFile(Path.toCosts(basename, s, b)).toStream.iterator,
+        for (b <- 0 until bucketCount) yield Lines.fromFile(Path.toCosts(basename, s, b)).toList.iterator,
       Features.get(basename)
     )
 
