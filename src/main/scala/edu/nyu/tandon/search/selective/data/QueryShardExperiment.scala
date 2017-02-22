@@ -17,10 +17,6 @@ class QueryShardExperiment(val payoffs: Seq[Seq[Iterator[String]]],
 
   override def iterator: Iterator[QueryData] = {
 
-    /* Open iterators */
-//    val payoffs = payoffSources map (_.map(_.getLines().toStream.iterator))
-//    val costs = costSources map (_.map(_.getLines().toStream.iterator))
-
     new Iterator[QueryData] {
 
       override def hasNext: Boolean = {
