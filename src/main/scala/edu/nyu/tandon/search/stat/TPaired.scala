@@ -94,7 +94,6 @@ object TPaired {
       arg[Double]("<alpha>")
         .action((x, c) => c.copy(alpha = x))
         .text("level of significance")
-        .required()
 
     }
 
