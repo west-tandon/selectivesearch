@@ -74,7 +74,8 @@ object ShardSelector extends LazyLogging {
                       budgetDefined: Boolean = false,
                       threshold: Double = 0.0,
                       thresholdDefined: Boolean = false,
-                      paramStr: String = null)
+                      paramStr: String = null,
+                      shardPenalty: Double = 0.0)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -90,6 +91,10 @@ object ShardSelector extends LazyLogging {
       opt[String]('t', "threshold")
         .action((x, c) => c.copy(paramStr = x, threshold = x.toDouble, thresholdDefined = true))
         .text("the threshold for bucket payoffs")
+
+      opt[String]('p', "shard-penalty")
+        .action((x, c) => c.copy(paramStr = x, threshold = x.toDouble, thresholdDefined = true))
+        .text("the penalty of accessing the shard (but not included in total budget)")
 
       checkConfig(c =>
         if ((!c.budgetDefined && !c.thresholdDefined) || (c.budgetDefined && c.thresholdDefined))
@@ -117,10 +122,10 @@ object ShardSelector extends LazyLogging {
         val indicator = if (config.budgetDefined) BudgetIndicator else ThresholdIndicator
         val budgetBasename = s"${config.basename}$indicator[${config.paramStr}]"
 
-        val experiment = QueryShardExperiment.fromBasename(config.basename)
+        val experiment = QueryShardExperiment.fromBasename(config.basename, config.shardPenalty)
 
         val strategy: List[Bucket] => List[Bucket] = if (config.budgetDefined) bucketsWithinBudget(config.budget)
-        else bucketsUntilThreshold(config.threshold)
+          else bucketsUntilThreshold(config.threshold)
         val selection = new ShardSelector(experiment, strategy).selection
         writeSelection(selection, budgetBasename)
 

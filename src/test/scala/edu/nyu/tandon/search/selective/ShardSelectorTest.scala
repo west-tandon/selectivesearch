@@ -3,6 +3,8 @@ package edu.nyu.tandon.search.selective
 import edu.nyu.tandon.search.selective.data.{Bucket, QueryShardExperiment}
 import edu.nyu.tandon.test.BaseFunSuite
 
+import org.scalatest.Matchers._
+
 /**
   * @author michal.siedlaczek@nyu.edu
   */
