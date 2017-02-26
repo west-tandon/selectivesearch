@@ -92,8 +92,8 @@ object ShardSelector extends LazyLogging {
         .action((x, c) => c.copy(paramStr = x, threshold = x.toDouble, thresholdDefined = true))
         .text("the threshold for bucket payoffs")
 
-      opt[String]('p', "shard-penalty")
-        .action((x, c) => c.copy(paramStr = x, threshold = x.toDouble, thresholdDefined = true))
+      opt[Double]('p', "shard-penalty")
+        .action((x, c) => c.copy(shardPenalty = x))
         .text("the penalty of accessing the shard (but not included in total budget)")
 
       checkConfig(c =>
