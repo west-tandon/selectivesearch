@@ -12,7 +12,8 @@ import scalax.io.StandardOpenOption._
   * @author michal.siedlaczek@nyu.edu
   */
 class ShardSelector(val queryShardExperiment: QueryShardExperiment,
-                    val selectionStrategy: List[Bucket] => List[Bucket])
+                    val selectionStrategy: List[Bucket] => List[Bucket],
+                    val alpha: Double)
   extends Iterable[Seq[Int]] {
 
   /**
@@ -30,7 +31,7 @@ class ShardSelector(val queryShardExperiment: QueryShardExperiment,
     val queryDataIterator = queryShardExperiment.iterator
     override def hasNext: Boolean = queryDataIterator.hasNext
     override def next(): Seq[Int] = {
-      selectedShards(ShardQueue.maxPayoffQueue(queryDataIterator.next()))
+      selectedShards(ShardQueue.maxPayoffQueue(queryDataIterator.next(), alpha))
     }
   }
 
@@ -75,7 +76,8 @@ object ShardSelector extends LazyLogging {
                       threshold: Double = 0.0,
                       thresholdDefined: Boolean = false,
                       paramStr: String = null,
-                      shardPenalty: Double = 0.0)
+                      shardPenalty: Double = 0.0,
+                      alpha: Double = 1.0)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -95,6 +97,10 @@ object ShardSelector extends LazyLogging {
       opt[Double]('p', "shard-penalty")
         .action((x, c) => c.copy(shardPenalty = x))
         .text("the penalty of accessing the shard (but not included in total budget)")
+
+      opt[Double]('a', "alpha")
+        .action((x, c) => c.copy(alpha = x))
+        .text("alpha * (bucketImpact / bucketCost) + (1 - alpha) * (shardImpact / shardCost)")
 
       checkConfig(c =>
         if ((!c.budgetDefined && !c.thresholdDefined) || (c.budgetDefined && c.thresholdDefined))
@@ -126,7 +132,7 @@ object ShardSelector extends LazyLogging {
 
         val strategy: List[Bucket] => List[Bucket] = if (config.budgetDefined) bucketsWithinBudget(config.budget)
           else bucketsUntilThreshold(config.threshold)
-        val selection = new ShardSelector(experiment, strategy).selection
+        val selection = new ShardSelector(experiment, strategy, config.alpha).selection
         writeSelection(selection, budgetBasename)
 
         val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)
