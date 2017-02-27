@@ -51,7 +51,7 @@ object Load {
       for (s <- 0 until shardCount) yield
         new ZippedIterator(
           for (b <- 0 until bucketCount)
-            yield Lines.fromFile(s"$basename#$s#$b$suffix").ofSeq(converter)
+            yield Lines.fromFile(s"$basename#$s#$b$suffix").ofSeq(converter).toList.iterator
         )
     )
   }

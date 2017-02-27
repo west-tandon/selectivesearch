@@ -1,13 +1,13 @@
 package edu.nyu.tandon.utils
 
-import java.io.{BufferedReader, FileReader}
+import java.io.{BufferedReader, File, FileReader}
 
 import edu.nyu.tandon.search.selective._
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class ReadLineIterator(file: String) extends Iterator[String] {
+class ReadLineIterator(file: File) extends Iterator[String] {
 
   lazy val reader = new BufferedReader(new FileReader(file))
 
@@ -32,7 +32,8 @@ class ReadLineIterator(file: String) extends Iterator[String] {
 }
 
 object Lines {
-  def fromFile(file: String): ReadLineIterator = new ReadLineIterator(file)
+  def fromFile(file: String): ReadLineIterator = fromFile(new File(file))
+  def fromFile(file: File): ReadLineIterator = new ReadLineIterator(file)
 
   implicit val intConverter: String => Int = java.lang.Integer.parseInt
   implicit val longConverter: String => Long = java.lang.Long.parseLong

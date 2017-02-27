@@ -5,6 +5,6 @@ package edu.nyu.tandon.search.selective.data
   */
 case class Bucket(shardId: Int,
                   payoff: Double,
-                  cost: Double) {
-  def apply(shardId: Int, payoff: Double, cost: Double) = new Bucket(shardId, payoff, cost)
+                  cost: Double,
+                  penalty: Double = 0.0) {
 }

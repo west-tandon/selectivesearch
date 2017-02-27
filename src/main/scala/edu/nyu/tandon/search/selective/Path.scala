@@ -28,6 +28,7 @@ object Path {
   val EvalSuffix = ".eval"
   val OverlapsSuffix = ".overlaps"
   val OverlapSuffix = ".overlap"
+  val QRelsSuffix = ".qrels"
 
   private def toAny(basename: String, suffix: String): String = s"$basename$suffix"
   private def toAny(basename: String, shardId: Int, suffix: String): String = s"$basename#$shardId$suffix"
@@ -48,6 +49,7 @@ object Path {
   def toCostModelEval(basename: String): String = s"${toCostModel(basename)}$EvalSuffix"
   def toOverlaps(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapsSuffix")
   def toOverlap(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapSuffix")
+  def toQRels(basename: String): String = toAny(basename, QRelsSuffix)
 
   /* Shard level */
   def toCosts(basename: String, shardId: Int): String = toAny(basename, shardId, CostSuffix)
@@ -58,6 +60,7 @@ object Path {
   def toLocalResults(basename: String): String = toAny(basename, s"$ResultsSuffix$LocalSuffix")
   def toGlobalResults(basename: String): String = toAny(basename, s"$ResultsSuffix$GlobalSuffix")
   def toScores(basename: String): String = toAny(basename, s"$ResultsSuffix$ScoresSuffix")
+  def toScores(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, s"$ResultsSuffix$ScoresSuffix")
   def toGlobalResults(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, s"$ResultsSuffix$GlobalSuffix")
 
 //  def absolute(path: String): String = path.head match {

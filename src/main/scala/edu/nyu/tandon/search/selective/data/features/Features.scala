@@ -1,21 +1,38 @@
 package edu.nyu.tandon.search.selective.data.features
 
-import java.io.File
+import java.io.{File, FileInputStream, FileNotFoundException, ObjectInputStream}
 
 import com.typesafe.scalalogging.LazyLogging
-import edu.nyu.tandon.search.selective.Spark
 import edu.nyu.tandon.search.selective.data.Properties
-import edu.nyu.tandon.search.selective.data.features.Features.{BID, QID, SID}
+import edu.nyu.tandon.search.selective.data.features.Features.{QID, SID}
 import edu.nyu.tandon.search.selective.data.results.Result
-import edu.nyu.tandon.utils.{Lines, ZippedIterator}
+import edu.nyu.tandon.search.selective.{Spark, Titles2Map}
 import edu.nyu.tandon.utils.Lines._
+import edu.nyu.tandon.utils.{Lines, ZippedIterator}
 import org.apache.spark.sql.DataFrame
+
+import scala.collection.immutable.HashMap
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
 class Features(val basename: String,
                val properties: Properties) extends LazyLogging {
+
+  lazy val titleMap: HashMap[String, Int] = {
+    val ois = try {
+      new ObjectInputStream(new FileInputStream(s"$basename.titlemap"))
+    } catch {
+      case e: FileNotFoundException =>
+        logger.info("did not find the title map, proceeding with creating it before optimizing...")
+        Titles2Map.titles2map(this)
+        logger.info("title map created")
+        new ObjectInputStream(new FileInputStream(s"$basename.titlemap"))
+    }
+    val map = ois.readObject().asInstanceOf[HashMap[String, Int]]
+    ois.close()
+    map
+  }
 
   /* Shards */
   lazy val shardCount: Int = shardSizes.length
@@ -53,6 +70,12 @@ class Features(val basename: String,
   def queries: Iterator[String] = Lines.fromFile(s"$basename.queries")
   def queryLengths: Iterator[Int] = Lines.fromFile(s"$basename.lengths").of[Int]
   def trecIds: Iterator[Long] = Lines.fromFile(s"$basename.trecid").of[Long]
+  def qrelsReference: Seq[Seq[Int]] = {
+    val references = Lines.fromFile(s"$basename.qrels").ofSeq[String].toSeq.groupBy(_.head)
+    val sortedQueryIds = references.keys.map(intConverter).toIndexedSeq.sorted
+    for (queryId <- sortedQueryIds)
+      yield references(s"$queryId").filter(_(3) != "0").map(_(2)).map(titleMap(_))
+  }
 
   /* Documents */
   def documentTitles: Iterator[String] = Lines.fromFile(s"$basename.titles")

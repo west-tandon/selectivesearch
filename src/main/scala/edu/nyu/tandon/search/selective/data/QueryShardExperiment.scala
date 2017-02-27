@@ -2,23 +2,21 @@ package edu.nyu.tandon.search.selective.data
 
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.search.selective.data.features.Features
+import edu.nyu.tandon.utils.Lines
 
 import scala.io.{BufferedSource, Source}
 
 /**
   * @author michal.siedlaczek@nyu.edu
   */
-class QueryShardExperiment(val payoffSources: Seq[Seq[BufferedSource]],
-                           val costSources: Seq[Seq[BufferedSource]],
-                           val features: Features) extends Iterable[QueryData] {
+class QueryShardExperiment(val payoffs: Seq[Seq[Iterator[String]]],
+                           val costs: Seq[Seq[Iterator[String]]],
+                           val features: Features,
+                           val shardPenalty: Double) extends Iterable[QueryData] {
 
   def numberOfShards: Int = features.shardCount
 
   override def iterator: Iterator[QueryData] = {
-
-    /* Open iterators */
-    val payoffs = payoffSources map (_.map(_.getLines()))
-    val costs = costSources map (_.map(_.getLines()))
 
     new Iterator[QueryData] {
 
@@ -41,7 +39,9 @@ class QueryShardExperiment(val payoffSources: Seq[Seq[BufferedSource]],
         val nextCosts:   Seq[List[Double]] = costs map (_.map(_.next().toDouble).toList)
 
         val bucketsByShard = (nextPayoffs zip nextCosts).zipWithIndex map {
-          case ((pl, cl), shardId) => (pl zip cl) map { case (p, c) => Bucket(shardId, p, c) }
+          case ((pl, cl), shardId) => (pl zip cl).zipWithIndex map {
+            case ((p, c), bucket) => Bucket(shardId, p, c, if (bucket == 0) shardPenalty else 0.0)
+          }
         }
 
         new QueryData(bucketsByShard)
@@ -55,7 +55,7 @@ class QueryShardExperiment(val payoffSources: Seq[Seq[BufferedSource]],
 
 object QueryShardExperiment {
 
-  def fromBasename(basename: String): QueryShardExperiment = {
+  def fromBasename(basename: String, shardPenalty: Double = 0.0): QueryShardExperiment = {
 
     val properties = Properties.get(basename)
     val shardCount = Features.get(properties).shardCount
@@ -63,10 +63,11 @@ object QueryShardExperiment {
 
     new QueryShardExperiment(
       for (s <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield Source.fromFile(Path.toPayoffs(basename, s, b)),
+        for (b <- 0 until bucketCount) yield Lines.fromFile(Path.toPayoffs(basename, s, b)).toList.iterator,
       for (s <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield Source.fromFile(Path.toCosts(basename, s, b)),
-      Features.get(basename)
+        for (b <- 0 until bucketCount) yield Lines.fromFile(Path.toCosts(basename, s, b)).toList.iterator,
+      Features.get(basename),
+      shardPenalty
     )
 
   }

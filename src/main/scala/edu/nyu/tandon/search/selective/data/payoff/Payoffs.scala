@@ -32,19 +32,15 @@ class Payoffs(val payoffs: Iterator[Seq[Seq[Double]]]) extends Iterator[Seq[Seq[
     val shardCount = Features.get(properties).shardCount
     val bucketCount = properties.bucketCount
 
-    val writers =
-      for (s <- 0 until shardCount) yield
-        for (b <- 0 until bucketCount) yield
-          new FileWriter(Path.toPayoffs(basename, s, b))
+    val payoffStream = payoffs.toStream
 
-    for ((queryPayoffs, i) <- payoffs.zipWithIndex) {
-      logger.info(s"Processing query $i")
-      for ((shardPayoffs, shardWriters) <- queryPayoffs zip writers;
-           (payoff, writer) <- shardPayoffs zip shardWriters
-      ) writer.append(s"$payoff\n")
-    }
-
-    for (wl <- writers; w <- wl) w.close()
+    for (s <- 0 until shardCount)
+      for (b <- 0 until bucketCount) {
+        val writer = new FileWriter(Path.toPayoffs(basename, s, b))
+        logger.info(s"Writing payoffs for shard $s and bucket $b")
+        for (queryPayoffs <- payoffStream) writer.append(s"${queryPayoffs(s)(b)}\n")
+        writer.close()
+      }
   }
 
 }

@@ -3,6 +3,8 @@ package edu.nyu.tandon.search.selective
 import edu.nyu.tandon.search.selective.data.{Bucket, QueryShardExperiment}
 import edu.nyu.tandon.test.BaseFunSuite
 
+import org.scalatest.Matchers._
+
 /**
   * @author michal.siedlaczek@nyu.edu
   */
@@ -10,7 +12,7 @@ class ShardSelectorTest extends BaseFunSuite {
 
   trait Selector {
     val queryExperiment = QueryShardExperiment.fromBasename(getClass.getResource("/").getPath + "test")
-    val selector = new ShardSelector(queryExperiment, ShardSelector.bucketsWithinBudget(5))
+    val selector = new ShardSelector(queryExperiment, ShardSelector.bucketsWithinBudget(5), alpha = 1.0)
   }
 
   trait Buckets {
