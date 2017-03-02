@@ -1,8 +1,9 @@
 package edu.nyu.tandon.search.selective
 
 import com.typesafe.scalalogging.LazyLogging
+import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.data.results._
-import edu.nyu.tandon.search.selective.data.{Bucket, QueryShardExperiment, ShardQueue}
+import edu.nyu.tandon.search.selective.data.{Bucket, Properties, QueryShardExperiment, ShardQueue}
 import edu.nyu.tandon.utils.WriteLineIterator._
 import scopt.OptionParser
 
@@ -13,7 +14,8 @@ import scalax.io.StandardOpenOption._
   */
 class ShardSelector(val queryShardExperiment: QueryShardExperiment,
                     val selectionStrategy: List[Bucket] => List[Bucket],
-                    val alpha: Double)
+                    val alpha: Double,
+                    val shardLimit: Int)
   extends Iterable[Seq[Int]] {
 
   /**
@@ -31,7 +33,7 @@ class ShardSelector(val queryShardExperiment: QueryShardExperiment,
     val queryDataIterator = queryShardExperiment.iterator
     override def hasNext: Boolean = queryDataIterator.hasNext
     override def next(): Seq[Int] = {
-      selectedShards(ShardQueue.maxPayoffQueue(queryDataIterator.next(), alpha))
+      selectedShards(ShardQueue.maxPayoffQueue(queryDataIterator.next(), shardLimit, alpha))
     }
   }
 
@@ -77,7 +79,8 @@ object ShardSelector extends LazyLogging {
                       thresholdDefined: Boolean = false,
                       paramStr: String = null,
                       shardPenalty: Double = 0.0,
-                      alpha: Double = 1.0)
+                      alpha: Double = 1.0,
+                      shardLimit: Int = 0)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -101,6 +104,10 @@ object ShardSelector extends LazyLogging {
       opt[Double]('a', "alpha")
         .action((x, c) => c.copy(alpha = x))
         .text("alpha * (bucketImpact / bucketCost) + (1 - alpha) * (shardImpact / shardCost)")
+
+      opt[Int]('s', "shard-limit")
+        .action((x, c) => c.copy(shardLimit = x))
+        .text("shard limit")
 
       checkConfig(c =>
         if ((!c.budgetDefined && !c.thresholdDefined) || (c.budgetDefined && c.thresholdDefined))
@@ -129,10 +136,12 @@ object ShardSelector extends LazyLogging {
         val budgetBasename = s"${config.basename}$indicator[${config.paramStr}]"
 
         val experiment = QueryShardExperiment.fromBasename(config.basename, config.shardPenalty)
+        val shardLimit = if (config.shardLimit > 0) config.shardLimit
+                         else Features.get(Properties.get(config.basename)).shardCount
 
         val strategy: List[Bucket] => List[Bucket] = if (config.budgetDefined) bucketsWithinBudget(config.budget)
           else bucketsUntilThreshold(config.threshold)
-        val selection = new ShardSelector(experiment, strategy, config.alpha).selection
+        val selection = new ShardSelector(experiment, strategy, config.alpha, shardLimit).selection
         writeSelection(selection, budgetBasename)
 
         val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)

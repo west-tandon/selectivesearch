@@ -12,7 +12,7 @@ class ShardSelectorTest extends BaseFunSuite {
 
   trait Selector {
     val queryExperiment = QueryShardExperiment.fromBasename(getClass.getResource("/").getPath + "test")
-    val selector = new ShardSelector(queryExperiment, ShardSelector.bucketsWithinBudget(5), alpha = 1.0)
+    val selector = new ShardSelector(queryExperiment, ShardSelector.bucketsWithinBudget(5), alpha = 1.0, 3)
   }
 
   trait Buckets {
