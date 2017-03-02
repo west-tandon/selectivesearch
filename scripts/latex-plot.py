@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 
-parser = argparse.ArgumentParser(description='Plot CSV', prog='plot')
+parser = argparse.ArgumentParser(description='Export to latex', prog='latex-plot')
 parser.add_argument('input', nargs='*', type=argparse.FileType('r'), default=[sys.stdin])
 parser.add_argument('--x-column', '-x', nargs='?', default=None)
 parser.add_argument('--y-column', '-y', nargs='?', default=None)
