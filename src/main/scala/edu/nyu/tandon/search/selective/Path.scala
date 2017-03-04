@@ -28,6 +28,8 @@ object Path {
   val EvalSuffix = ".eval"
   val OverlapsSuffix = ".overlaps"
   val OverlapSuffix = ".overlap"
+  val PrecisionsSuffix = ".precisions"
+  val PrecisionSuffix = ".precision"
   val QRelsSuffix = ".qrels"
 
   private def toAny(basename: String, suffix: String): String = s"$basename$suffix"
@@ -49,6 +51,8 @@ object Path {
   def toCostModelEval(basename: String): String = s"${toCostModel(basename)}$EvalSuffix"
   def toOverlaps(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapsSuffix")
   def toOverlap(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapSuffix")
+  def toPrecisions(basename: String, k: Int): String = toAny(basename, s"@$k$PrecisionsSuffix")
+  def toPrecision(basename: String, k: Int): String = toAny(basename, s"@$k$PrecisionSuffix")
   def toQRels(basename: String): String = toAny(basename, QRelsSuffix)
 
   /* Shard level */
