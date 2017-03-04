@@ -29,7 +29,8 @@ object Run {
     (BudgetOptimizer.CommandName, BudgetOptimizer.main),
     (ClairvoyantSelector.CommandName, ClairvoyantSelector.main),
     (SmartSelector.CommandName, SmartSelector.main),
-    (TPaired.CommandName, TPaired.main)
+    (TPaired.CommandName, TPaired.main),
+    (Precision.CommandName, Precision.main)
   )
 
   def printUsage(): Unit = {
