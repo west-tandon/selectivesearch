@@ -42,7 +42,6 @@ object Precision extends LazyLogging {
       opt[Seq[Int]]('k', "at")
         .action((x, c) => c.copy(at = x))
         .text("a list of k's for which to calculate P@k")
-        .required()
 
     }
 
