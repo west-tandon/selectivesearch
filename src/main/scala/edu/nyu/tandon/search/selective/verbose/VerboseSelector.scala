@@ -194,6 +194,7 @@ object VerboseSelector extends LazyLogging {
 
         for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
           logger.info(s"processing query $idx")
+          logger.debug(s"total number of retrieved relevant documents: ${selector.shards.flatMap(_.buckets).flatMap(_.results).count(_.relevant)}")
           processSelector(config.precisions, config.overlaps)(idx, selector, writer)
         }
 
