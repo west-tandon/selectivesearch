@@ -24,7 +24,7 @@ class Features(val basename: String,
       new ObjectInputStream(new FileInputStream(s"$basename.titlemap"))
     } catch {
       case e: FileNotFoundException =>
-        logger.info("did not find the title map, proceeding with creating it before optimizing...")
+        logger.info("did not find the title map, creating it before proceeding...")
         Titles2Map.titles2map(this)
         logger.info("title map created")
         new ObjectInputStream(new FileInputStream(s"$basename.titlemap"))
@@ -71,11 +71,11 @@ class Features(val basename: String,
   def queryLengths: Iterator[Int] = Lines.fromFile(s"$basename.lengths").of[Int]
   def trecIds: Iterator[Long] = Lines.fromFile(s"$basename.trecid").of[Long]
   def qrelsReference: Seq[Seq[Int]] = {
-    val references = Lines.fromFile(s"$basename.qrels").ofSeq[String].toSeq.groupBy(_.head)
+    val references = Lines.fromFile(s"$basename.qrels").ofSeq.toSeq.groupBy(_.head)
     val sortedQueryIds = references.keys.map(intConverter).toIndexedSeq.sorted
     for (queryId <- sortedQueryIds)
       yield references(s"$queryId")
-        .filter(l => Set("1", "2").contains(l(3)))
+        .filter(l => intConverter(l(3)) > 0)
         .map(_(2))
         .map(titleMap(_))
   }

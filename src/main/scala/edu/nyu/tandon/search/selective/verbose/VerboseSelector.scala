@@ -22,6 +22,7 @@ class VerboseSelector(val shards: Seq[Shard],
                       top: mutable.PriorityQueue[Result] = new mutable.PriorityQueue[Result]()(scoreOrdering),
                       val lastSelectedShard: Int = -1,
                       val cost: Double = 0,
+                      val postings: Long = 0,
                       maxTop: Int = 100,
                       scale: Int = 4) {
 
@@ -39,10 +40,15 @@ class VerboseSelector(val shards: Seq[Shard],
       top.enqueue(top.dequeueAll.take(maxTop): _*)
 
       val selectedShardId = selected.shardId
-      Some(new VerboseSelector(shards.take(selectedShardId)
-        ++ Seq(Shard(shards(selectedShardId).buckets, shards(selectedShardId).numSelected + 1))
-        ++ shards.drop(selectedShardId + 1),
-        top, selectedShardId, cost + selected.cost))
+      Some(
+        new VerboseSelector(shards.take(selectedShardId)
+          ++ Seq(Shard(shards(selectedShardId).buckets, shards(selectedShardId).numSelected + 1))
+          ++ shards.drop(selectedShardId + 1),
+        top,
+        selectedShardId,
+        cost + selected.cost,
+        postings + selected.postings)
+      )
     }
   }
 
@@ -63,6 +69,7 @@ class VerboseSelector(val shards: Seq[Shard],
 
   lazy val lastSelectedBucket: Int = shards(lastSelectedShard).numSelected - 1
   lazy val lastSelectedCost: Double = shards(lastSelectedShard).buckets(lastSelectedBucket).cost
+  lazy val lastSelectedPostings: Long = shards(lastSelectedShard).buckets(lastSelectedBucket).postings
 
 }
 
@@ -80,17 +87,19 @@ object VerboseSelector extends LazyLogging {
       ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
         val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long]
         val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double]
-        val costs = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Double]
+        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double]
+        val postingCosts = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Long]
         val impacts = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double]
-        for ((res, bas, qrels, score, cost, impact) <-
-             results.zip(base.iterator).flatZip(qrels.iterator).flatZip(scores).flatZip(costs).flatZip(impacts)) yield {
+        for ((res, bas, qr, score, cost, impact, postingCost) <-
+             results.zip(base.iterator).flatZip(qrels.iterator)
+               .flatZip(scores).flatZip(costs).flatZip(impacts).flatZip(postingCosts)) yield {
           Bucket(shard, (for ((r, s) <- res.zip(score)) yield {
-            Result(score = s, relevant = qrels.contains(r), originalRank = {
+            Result(score = s, relevant = qr.contains(r), originalRank = {
               val idx = bas.indexOf(r)
               if (idx < 0) Int.MaxValue
               else idx
             })
-          }).toList, impact, cost)
+          }).toList, impact, cost, postingCost)
         }
       }).map(l => new Shard(l.toList)))
     data.map(new VerboseSelector(_)).toSeq
@@ -101,11 +110,13 @@ object VerboseSelector extends LazyLogging {
       "qid",
       "step",
       "cost",
+      "postings",
       precisions.map(p => s"P@$p").mkString(","),
       overlaps.map(o => s"O@$o").mkString(","),
       "last_shard",
       "last_bucket",
       "last_cost",
+      "last_postings",
       "last#relevant",
       overlaps.map(o => s"last#top_$o").mkString(",")
     ).mkString(","))
@@ -117,7 +128,7 @@ object VerboseSelector extends LazyLogging {
                      (qid: Int, selector: VerboseSelector, writer: BufferedWriter): Unit = {
 
     @tailrec
-    def process(selector: VerboseSelector, step: Int = 0): Unit = {
+    def process(selector: VerboseSelector, step: Int = 1): Unit = {
 
       logger.info(s"Selected [shard=${selector.lastSelectedShard}, bucket=${selector.lastSelectedBucket}, cost=${selector.lastSelectedCost}]")
 
@@ -125,11 +136,13 @@ object VerboseSelector extends LazyLogging {
         qid,
         step,
         selector.cost,
+        selector.postings,
         precisions.map(selector.precisionAt).mkString(","),
         overlaps.map(selector.overlapAt).mkString(","),
         selector.lastSelectedShard,
         selector.lastSelectedBucket,
         selector.lastSelectedCost,
+        selector.lastSelectedPostings,
         selector.numRelevantInLastSelected(),
         overlaps.map(selector.numTopInLastSelected).mkString(",")
       ).mkString(","))
@@ -201,7 +214,8 @@ case class Shard(buckets: List[Bucket],
 case class Bucket(shardId: Int,
                   results: Seq[Result],
                   impact: Double,
-                  cost: Double) {
+                  cost: Double,
+                  postings: Long) {
 }
 
 case class Result(score: Double,
