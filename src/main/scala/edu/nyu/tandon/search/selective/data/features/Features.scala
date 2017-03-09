@@ -74,7 +74,10 @@ class Features(val basename: String,
     val references = Lines.fromFile(s"$basename.qrels").ofSeq[String].toSeq.groupBy(_.head)
     val sortedQueryIds = references.keys.map(intConverter).toIndexedSeq.sorted
     for (queryId <- sortedQueryIds)
-      yield references(s"$queryId").filter(_(3) != "0").map(_(2)).map(titleMap(_))
+      yield references(s"$queryId")
+        .filter(l => Set("1", "2").contains(l(3)))
+        .map(_(2))
+        .map(titleMap(_))
   }
 
   /* Documents */

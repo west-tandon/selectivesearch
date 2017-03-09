@@ -6,6 +6,7 @@ package edu.nyu.tandon.search.selective
 object Path {
 
   val CostSuffix = ".cost"
+  val PostingCostSuffix = ".postingcost"
   val PayoffSuffix = ".payoff"
   val QueriesSuffix = ".queries"
   val QueryLengthsSuffix = ".lengths"
@@ -60,6 +61,7 @@ object Path {
 
   /* Bucket level */
   def toCosts(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, CostSuffix)
+  def toPostingCosts(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, PostingCostSuffix)
   def toPayoffs(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, PayoffSuffix)
   def toLocalResults(basename: String): String = toAny(basename, s"$ResultsSuffix$LocalSuffix")
   def toGlobalResults(basename: String): String = toAny(basename, s"$ResultsSuffix$GlobalSuffix")

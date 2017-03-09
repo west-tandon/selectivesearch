@@ -131,5 +131,5 @@ object TupleIterators {
   implicit def iterator2Tuple4Iterator[A1, A2, A3, A4](iterator: Iterator[(A1, A2, A3, A4)]): Tuple4Iterator[A1, A2, A3, A4] = new Tuple4Iterator[A1, A2, A3, A4](iterator)
   implicit def iterator2Tuple5Iterator[A1, A2, A3, A4, A5](iterator: Iterator[(A1, A2, A3, A4, A5)]): Tuple5Iterator[A1, A2, A3, A4, A5] = new Tuple5Iterator[A1, A2, A3, A4, A5](iterator)
   implicit def iterator2Tuple6Iterator[A1, A2, A3, A4, A5, A6](iterator: Iterator[(A1, A2, A3, A4, A5, A6)]): Tuple6Iterator[A1, A2, A3, A4, A5, A6] = new Tuple6Iterator[A1, A2, A3, A4, A5, A6](iterator)
-  implicit def iterator2Tuple6Iterator[A1, A2, A3, A4, A5, A6, A7](iterator: Iterator[(A1, A2, A3, A4, A5, A6, A7)]): Tuple7Iterator[A1, A2, A3, A4, A5, A6, A7] = new Tuple7Iterator[A1, A2, A3, A4, A5, A6, A7](iterator)
+  implicit def iterator2Tuple7Iterator[A1, A2, A3, A4, A5, A6, A7](iterator: Iterator[(A1, A2, A3, A4, A5, A6, A7)]): Tuple7Iterator[A1, A2, A3, A4, A5, A6, A7] = new Tuple7Iterator[A1, A2, A3, A4, A5, A6, A7](iterator)
 }
