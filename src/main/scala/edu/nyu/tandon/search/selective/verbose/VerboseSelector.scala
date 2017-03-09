@@ -1,6 +1,6 @@
 package edu.nyu.tandon.search.selective.verbose
 
-import java.io.BufferedWriter
+import java.io.{BufferedWriter, FileWriter}
 
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.Path
@@ -119,6 +119,8 @@ object VerboseSelector extends LazyLogging {
     @tailrec
     def process(selector: VerboseSelector, step: Int = 0): Unit = {
 
+      logger.info(s"Selected [shard=${selector.lastSelectedShard}, bucket=${selector.lastSelectedBucket}, cost=${selector.lastSelectedCost}]")
+
       writer.write(Seq(
         qid,
         step,
@@ -146,7 +148,9 @@ object VerboseSelector extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
 
-    case class Config(basename: String = null)
+    case class Config(basename: String = null,
+                      precisions: Seq[Int] = Seq(10, 30),
+                      overlaps: Seq[Int] = Seq(10, 30))
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -155,6 +159,14 @@ object VerboseSelector extends LazyLogging {
         .text("the prefix of the files")
         .required()
 
+      opt[Seq[Int]]('p', "precisions")
+        .action((x, c) => c.copy(precisions = x))
+        .text("k for which to compute P@k")
+
+      opt[Seq[Int]]('o', "overlaps")
+        .action((x, c) => c.copy(overlaps = x))
+        .text("k for which to compute O@k")
+
     }
 
     parser.parse(args, Config()) match {
@@ -162,21 +174,18 @@ object VerboseSelector extends LazyLogging {
 
         logger.info("creating selectors")
         val selectorsForQueries = selectors(config.basename)
-//        val budgetBasename = s"${config.basename}$BudgetIndicator[${config.budgetStr}]"
-//
+
+        val writer = new BufferedWriter(new FileWriter(s"${config.basename}.verbose"))
+
+        printHeader(config.precisions, config.overlaps)(writer)
+
         for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
           logger.info(s"processing query $idx")
-//          processSelector(idx, selector)
+          processSelector(config.precisions, config.overlaps)(idx, selector, writer)
         }
-//        val selection = (for ((selector, idx) <- selectorsForQueries.zipWithIndex)
-//          yield {
-//            logger.info(s"selection for query $idx")
-//            selector.select(selector.threshold).shards.map(_.numSelected)
-//          }).toStream
-//        ShardSelector.writeSelection(selection, budgetBasename)
-//        val selected = data.results.resultsByShardsAndBucketsFromBasename(config.basename)
-//          .select(selection).toSeq
-//        ShardSelector.writeSelected(selected, budgetBasename)
+
+        writer.close()
+        logger.info("done")
 
       case None =>
     }
