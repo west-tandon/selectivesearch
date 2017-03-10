@@ -87,11 +87,11 @@ object VerboseSelector extends LazyLogging {
     val qrels = features.qrelsReference
     val data = ZippedIterator(for (shard <- 0 until features.shardCount) yield
       ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
-        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long].toSeq.iterator
-        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double].toSeq.iterator
-        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double].toSeq.iterator
-        val postingCosts = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Long].toSeq.iterator
-        val impacts = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double].toSeq.iterator
+        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long].toIndexedSeq.iterator
+        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double].toIndexedSeq.iterator
+        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double].toIndexedSeq.iterator
+        val postingCosts = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Long].toIndexedSeq.iterator
+        val impacts = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double].toIndexedSeq.iterator
         for ((res, bas, qr, score, cost, impact, postingCost) <-
              results.zip(base.iterator).flatZip(qrels.iterator)
                .flatZip(scores).flatZip(costs).flatZip(impacts).flatZip(postingCosts)) yield {
