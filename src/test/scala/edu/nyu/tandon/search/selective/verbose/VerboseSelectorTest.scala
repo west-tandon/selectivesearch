@@ -132,13 +132,13 @@ class VerboseSelectorTest extends BaseFunSuite {
       VerboseSelector.processSelector(precisions, overlaps)(0, selector, writer)
 
       strWriter.toString shouldBe Seq(
-        "qid,step,cost,postings,P@10,P@30,O@10,O@30,last_shard,last_bucket,last_cost,last_postings,last#relevant,last#top_10,last#top_30\n",
-        "0,1,1.0,10,0.1,0.0333,0.2,0.1667,0,1,1.0,10,1,1,2\n",
-        "0,2,2.0,20,0.2,0.0667,0.3,0.2,1,1,1.0,10,2,2,2\n",
-        "0,3,3.0,30,0.2,0.0667,0.3,0.2333,1,2,1.0,10,2,2,3\n",
-        "0,4,4.0,40,0.3,0.1,0.4,0.2667,0,2,1.0,10,2,2,3\n",
-        "0,5,5.0,50,0.4,0.1333,0.5,0.3,0,3,1.0,10,3,3,4\n",
-        "0,6,6.0,60,0.4,0.1333,0.6,0.3333,1,3,1.0,10,2,3,4\n"
+        "qid,step,cost,postings,postings_relative,P@10,P@30,O@10,O@30,last_shard,last_bucket,last_cost,last_postings,last#relevant,last#top_10,last#top_30\n",
+        "0,1,1.0,10,0.125,0.1,0.0333,0.2,0.1667,0,1,1.0,10,1,1,2\n",
+        "0,2,2.0,20,0.25,0.2,0.0667,0.3,0.2,1,1,1.0,10,2,2,2\n",
+        "0,3,3.0,30,0.375,0.2,0.0667,0.3,0.2333,1,2,1.0,10,2,2,3\n",
+        "0,4,4.0,40,0.5,0.3,0.1,0.4,0.2667,0,2,1.0,10,2,2,3\n",
+        "0,5,5.0,50,0.625,0.4,0.1333,0.5,0.3,0,3,1.0,10,3,3,4\n",
+        "0,6,6.0,60,0.75,0.4,0.1333,0.6,0.3333,1,3,1.0,10,2,3,4\n"
       ).mkString
     }
   }

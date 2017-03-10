@@ -68,8 +68,10 @@ class VerboseSelector(val shards: Seq[Shard],
   }
 
   lazy val lastSelectedBucket: Int = shards(lastSelectedShard).numSelected - 1
-  lazy val lastSelectedCost: Double = shards(lastSelectedShard).buckets(lastSelectedBucket).cost
+  lazy val lastSelectedCost: Double = round(shards(lastSelectedShard).buckets(lastSelectedBucket).cost)
   lazy val lastSelectedPostings: Long = shards(lastSelectedShard).buckets(lastSelectedBucket).postings
+  lazy val totalPostings: Long = shards.map(_.postings).sum
+  lazy val postingsRelative: Double = round(postings.toDouble / totalPostings.toDouble)
 
 }
 
@@ -85,11 +87,11 @@ object VerboseSelector extends LazyLogging {
     val qrels = features.qrelsReference
     val data = ZippedIterator(for (shard <- 0 until features.shardCount) yield
       ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
-        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long]
-        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double]
-        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double]
-        val postingCosts = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Long]
-        val impacts = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double]
+        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long].toSeq.iterator
+        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double].toSeq.iterator
+        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double].toSeq.iterator
+        val postingCosts = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Long].toSeq.iterator
+        val impacts = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double].toSeq.iterator
         for ((res, bas, qr, score, cost, impact, postingCost) <-
              results.zip(base.iterator).flatZip(qrels.iterator)
                .flatZip(scores).flatZip(costs).flatZip(impacts).flatZip(postingCosts)) yield {
@@ -111,6 +113,7 @@ object VerboseSelector extends LazyLogging {
       "step",
       "cost",
       "postings",
+      "postings_relative",
       precisions.map(p => s"P@$p").mkString(","),
       overlaps.map(o => s"O@$o").mkString(","),
       "last_shard",
@@ -137,6 +140,7 @@ object VerboseSelector extends LazyLogging {
         step,
         selector.cost,
         selector.postings,
+        selector.postingsRelative,
         precisions.map(selector.precisionAt).mkString(","),
         overlaps.map(selector.overlapAt).mkString(","),
         selector.lastSelectedShard,
@@ -209,7 +213,7 @@ object VerboseSelector extends LazyLogging {
 
 case class Shard(buckets: List[Bucket],
                  numSelected: Int = 0) {
-
+  lazy val postings = buckets.map(_.postings).sum
 }
 
 case class Bucket(shardId: Int,
