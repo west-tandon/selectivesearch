@@ -87,14 +87,14 @@ object VerboseSelector extends LazyLogging {
     val qrels = features.qrelsReference
     val data = ZippedIterator(for (shard <- 0 until features.shardCount) yield
       ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
-        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long].toIndexedSeq.iterator
-        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double].toIndexedSeq.iterator
-        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double].toIndexedSeq.iterator
-        val postingCosts = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Long].toIndexedSeq.iterator
-        val impacts = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double].toIndexedSeq.iterator
+        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long].toIndexedSeq
+        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double].toIndexedSeq
+        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double].toIndexedSeq
+        val postingCosts = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Long].toIndexedSeq
+        val impacts = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double].toIndexedSeq
         for ((res, bas, qr, score, cost, impact, postingCost) <-
-             results.zip(base.iterator).flatZip(qrels.iterator)
-               .flatZip(scores).flatZip(costs).flatZip(impacts).flatZip(postingCosts)) yield {
+             results.iterator.zip(base.iterator).flatZip(qrels.iterator).flatZip(scores.iterator)
+               .flatZip(costs.iterator).flatZip(impacts.iterator).flatZip(postingCosts.iterator)) yield {
           Bucket(shard, (for ((r, s) <- res.zip(score)) yield {
             Result(score = s, relevant = qr.contains(r), originalRank = {
               val idx = bas.indexOf(r)
@@ -104,7 +104,7 @@ object VerboseSelector extends LazyLogging {
           }).toList, impact, cost, postingCost)
         }
       }).map(l => new Shard(l.toList)))
-    data.map(new VerboseSelector(_)).toSeq
+    data.map(new VerboseSelector(_)).toIndexedSeq
   }
 
   def printHeader(precisions: Seq[Int], overlaps: Seq[Int])(writer: BufferedWriter): Unit = {
