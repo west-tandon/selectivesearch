@@ -19,19 +19,20 @@ import scala.collection.immutable.HashMap
 class Features(val basename: String,
                val properties: Properties) extends LazyLogging {
 
-  lazy val titleMap: HashMap[String, Int] = {
-    val ois = try {
-      new ObjectInputStream(new FileInputStream(s"$basename.titlemap"))
+  lazy val titleMap: Map[String, Int] = {
+    val map = try {
+      val ois = new ObjectInputStream(new FileInputStream(s"$basename.titlemap"))
+      val m = ois.readObject().asInstanceOf[HashMap[String, Int]]
+      ois.close()
+      m
     } catch {
       case e: FileNotFoundException =>
         logger.info("did not find the title map, creating it before proceeding...")
-        Titles2Map.titles2map(this)
+        val m = Titles2Map.titles2map(this)
         logger.info("title map created")
-        new ObjectInputStream(new FileInputStream(s"$basename.titlemap"))
+        m
     }
-    val map = ois.readObject().asInstanceOf[HashMap[String, Int]]
-    ois.close()
-    map
+    map.withDefaultValue(-1)
   }
 
   /* Shards */
@@ -77,7 +78,11 @@ class Features(val basename: String,
       yield references(s"$queryId")
         .filter(l => intConverter(l(3)) > 0)
         .map(_(2))
-        .map(titleMap(_))
+        .map(title => {
+          val id = titleMap(title)
+          if (id == -1) logger.warn(s"title $title is not in the mapping, falling back to default ID=-1")
+          id
+        })
   }
 
   /* Documents */
