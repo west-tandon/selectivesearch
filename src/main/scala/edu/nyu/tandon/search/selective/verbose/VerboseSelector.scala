@@ -198,8 +198,8 @@ object VerboseSelector extends LazyLogging {
         .action((x, c) => c.copy(overlaps = x))
         .text("k for which to compute O@k")
 
-      opt[Seq[Int]]('P', "penalty")
-        .action((x, c) => c.copy(overlaps = x))
+      opt[Double]('P', "penalty")
+        .action((x, c) => c.copy(shardPenalty = x))
         .text("shard penalty")
 
     }
