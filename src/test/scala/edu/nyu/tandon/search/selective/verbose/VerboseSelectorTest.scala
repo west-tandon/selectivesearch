@@ -24,13 +24,13 @@ class VerboseSelectorTest extends BaseFunSuite {
   }
 
   trait Shards {
-    val s0 = new Shard(List(
+    val s0 = new Shard(id = 0, List(
       Bucket(shardId = 0, List(Result(1.0, relevant = true, originalRank = 4)), impact = 1.0, cost = 1.0, postings = 10), // already selected
       Bucket(shardId = 0, List(Result(0.9, relevant = false, originalRank = 20)), impact = 0.9, cost = 1.0, postings = 10),
       Bucket(shardId = 0, List(Result(0.5, relevant = true, originalRank = 3)), impact = 0.5, cost = 1.0, postings = 10),
       Bucket(shardId = 0, List(Result(0.3, relevant = true, originalRank = 6)), impact = 0.3, cost = 1.0, postings = 10)
     ), numSelected = 1)
-    val s1 = new Shard(List(
+    val s1 = new Shard(id = 1, List(
       Bucket(shardId = 1, List(Result(1.0, relevant = true, originalRank = 4)), impact = 1.0, cost = 1.0, postings = 10), // already selected
       Bucket(shardId = 1, List(Result(0.8, relevant = true, originalRank = 0)), impact = 0.8, cost = 1.0, postings = 10),
       Bucket(shardId = 1, List(Result(0.7, relevant = false, originalRank = 13)), impact = 0.7, cost = 1.0, postings = 10),
@@ -129,7 +129,7 @@ class VerboseSelectorTest extends BaseFunSuite {
 
       // when
       VerboseSelector.printHeader(precisions, overlaps)(writer)
-      VerboseSelector.processSelector(precisions, overlaps)(0, selector, writer)
+      VerboseSelector.processSelector(precisions, overlaps, 2)(0, selector, writer)
 
       strWriter.toString shouldBe Seq(
         "qid,step,cost,postings,postings_relative,P@10,P@30,O@10,O@30,last_shard,last_bucket,last_cost,last_postings,last#relevant,last#top_10,last#top_30\n",

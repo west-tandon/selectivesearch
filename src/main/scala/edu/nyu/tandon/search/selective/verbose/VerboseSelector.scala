@@ -26,6 +26,16 @@ class VerboseSelector(val shards: Seq[Shard],
                       maxTop: Int = 100,
                       scale: Int = 4) {
 
+//  def topShards(n: Int): VerboseSelector = new VerboseSelector(
+//    shards.sortBy(_.buckets.map(_.impact).sum).take(n),
+//    top,
+//    lastSelectedShard,
+//    cost,
+//    postings,
+//    maxTop,
+//    scale
+//  )
+
   def selectNext(): Option[VerboseSelector] = {
     val competingBucketsOpt = for (shard <- shards) yield
       if (shard.numSelected < shard.buckets.length) Some(shard.buckets(shard.numSelected))
@@ -33,7 +43,7 @@ class VerboseSelector(val shards: Seq[Shard],
     val competingBuckets = competingBucketsOpt.filter(_.nonEmpty).map(_.get)
     if (competingBuckets.isEmpty) None
     else {
-      val selected = competingBuckets.maxBy(b => b.impact / b.cost)
+      val selected = competingBuckets.maxBy(b => (b.penalty + b.impact) / b.cost)
 
       /* update queue */
       top.enqueue(selected.results: _*)
@@ -41,13 +51,15 @@ class VerboseSelector(val shards: Seq[Shard],
 
       val selectedShardId = selected.shardId
       Some(
-        new VerboseSelector(shards.take(selectedShardId)
-          ++ Seq(Shard(shards(selectedShardId).buckets, shards(selectedShardId).numSelected + 1))
-          ++ shards.drop(selectedShardId + 1),
-        top,
-        selectedShardId,
-        cost + selected.cost,
-        postings + selected.postings)
+        new VerboseSelector(
+          shards.take(selectedShardId)
+            ++ Seq(Shard(selectedShardId, shards(selectedShardId).buckets, shards(selectedShardId).numSelected + 1))
+            ++ shards.drop(selectedShardId + 1),
+          top,
+          selectedShardId,
+          cost + selected.cost,
+          postings + selected.postings
+        )
       )
     }
   }
@@ -81,7 +93,7 @@ object VerboseSelector extends LazyLogging {
 
   val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
 
-  def selectors(basename: String): Seq[VerboseSelector] = {
+  def selectors(basename: String, shardPenalty: Double): Seq[VerboseSelector] = {
     val features = Features.get(Properties.get(basename))
     val base = features.baseResults.toList.map(_.map(_.toInt))
     val qrels = features.qrelsReference
@@ -101,9 +113,9 @@ object VerboseSelector extends LazyLogging {
               if (idx < 0) Int.MaxValue
               else idx
             })
-          }).toList, impact, cost, postingCost)
+          }).toList, impact, cost, postingCost, penalty = if (bucket == 0) shardPenalty else 0.0)
         }
-      }).map(l => new Shard(l.toList)))
+      }).map(l => new Shard(shard, l.toList)))
     data.map(new VerboseSelector(_)).toIndexedSeq
   }
 
@@ -127,7 +139,7 @@ object VerboseSelector extends LazyLogging {
     writer.flush()
   }
 
-  def processSelector(precisions: Seq[Int], overlaps: Seq[Int])
+  def processSelector(precisions: Seq[Int], overlaps: Seq[Int], maxShards: Int)
                      (qid: Int, selector: VerboseSelector, writer: BufferedWriter): Unit = {
 
     @tailrec
@@ -167,7 +179,9 @@ object VerboseSelector extends LazyLogging {
 
     case class Config(basename: String = null,
                       precisions: Seq[Int] = Seq(10, 30),
-                      overlaps: Seq[Int] = Seq(10, 30))
+                      overlaps: Seq[Int] = Seq(10, 30),
+                      maxShards: Int = Int.MaxValue,
+                      shardPenalty: Double = 0.0)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -184,13 +198,17 @@ object VerboseSelector extends LazyLogging {
         .action((x, c) => c.copy(overlaps = x))
         .text("k for which to compute O@k")
 
+      opt[Seq[Int]]('P', "penalty")
+        .action((x, c) => c.copy(overlaps = x))
+        .text("shard penalty")
+
     }
 
     parser.parse(args, Config()) match {
       case Some(config) =>
 
         logger.info("creating selectors")
-        val selectorsForQueries = selectors(config.basename)
+        val selectorsForQueries = selectors(config.basename, config.shardPenalty)
 
         val writer = new BufferedWriter(new FileWriter(s"${config.basename}.verbose"))
 
@@ -199,7 +217,7 @@ object VerboseSelector extends LazyLogging {
         for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
           logger.info(s"processing query $idx")
           logger.debug(s"total number of retrieved relevant documents: ${selector.shards.flatMap(_.buckets).flatMap(_.results).count(_.relevant)}")
-          processSelector(config.precisions, config.overlaps)(idx, selector, writer)
+          processSelector(config.precisions, config.overlaps, config.maxShards)(idx, selector, writer)
         }
 
         writer.close()
@@ -211,7 +229,8 @@ object VerboseSelector extends LazyLogging {
   }
 }
 
-case class Shard(buckets: List[Bucket],
+case class Shard(id: Int,
+                 buckets: List[Bucket],
                  numSelected: Int = 0) {
   lazy val postings = buckets.map(_.postings).sum
 }
@@ -220,7 +239,8 @@ case class Bucket(shardId: Int,
                   results: Seq[Result],
                   impact: Double,
                   cost: Double,
-                  postings: Long) {
+                  postings: Long,
+                  penalty: Double = 0.0) {
 }
 
 case class Result(score: Double,
