@@ -26,15 +26,21 @@ class VerboseSelector(val shards: Seq[Shard],
                       maxTop: Int = 100,
                       scale: Int = 4) {
 
-//  def topShards(n: Int): VerboseSelector = new VerboseSelector(
-//    shards.sortBy(_.buckets.map(_.impact).sum).take(n),
-//    top,
-//    lastSelectedShard,
-//    cost,
-//    postings,
-//    maxTop,
-//    scale
-//  )
+  def topShards(n: Int): VerboseSelector = {
+    val topIds = shards.sortBy(-_.buckets.map(_.impact).sum).take(n).map(_.id).toSet
+    new VerboseSelector(
+      shards.map(shard =>
+        if (topIds.contains(shard.id)) shard
+        else Shard(shard.id, List())
+      ),
+      top,
+      lastSelectedShard,
+      cost,
+      postings,
+      maxTop,
+      scale
+    )
+  }
 
   def selectNext(): Option[VerboseSelector] = {
     val competingBucketsOpt = for (shard <- shards) yield
@@ -71,12 +77,12 @@ class VerboseSelector(val shards: Seq[Shard],
 
   def numRelevantInLastSelected(): Int = {
     assert(lastSelectedShard >= 0 && lastSelectedShard < shards.length, "no last selection to report")
-    shards(lastSelectedShard).buckets.take(lastSelectedBucket + 1).flatMap(_.results).count(_.relevant)
+    shards(lastSelectedShard).buckets(lastSelectedBucket).results.count(_.relevant)
   }
 
   def numTopInLastSelected(k: Int): Int = {
     assert(lastSelectedShard >= 0 && lastSelectedShard < shards.length, "no last selection to report")
-    shards(lastSelectedShard).buckets.take(lastSelectedBucket + 1).flatMap(_.results).count(_.originalRank <= k)
+    shards(lastSelectedShard).buckets(lastSelectedBucket).results.count(_.originalRank <= k)
   }
 
   lazy val lastSelectedBucket: Int = shards(lastSelectedShard).numSelected - 1
@@ -171,7 +177,7 @@ object VerboseSelector extends LazyLogging {
       }
     }
 
-    process(selector.selectNext().get)
+    process(selector.topShards(maxShards).selectNext().get)
     writer.flush()
   }
 
@@ -201,6 +207,10 @@ object VerboseSelector extends LazyLogging {
       opt[Double]('P', "penalty")
         .action((x, c) => c.copy(shardPenalty = x))
         .text("shard penalty")
+
+      opt[Double]('m', "max-shards")
+        .action((x, c) => c.copy(shardPenalty = x))
+        .text("maximum number of shards to select")
 
     }
 
