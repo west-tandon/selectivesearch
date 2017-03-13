@@ -180,6 +180,7 @@ object VerboseSelector extends LazyLogging {
       }
     }
 
+    logger.info(s"${selector.shards.map(_.buckets.head.impact)}")
     process(selector.topShards(maxShards).selectNext().get)
     writer.flush()
   }
