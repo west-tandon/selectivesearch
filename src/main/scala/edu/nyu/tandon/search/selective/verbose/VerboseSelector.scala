@@ -87,6 +87,7 @@ class VerboseSelector(val shards: Seq[Shard],
 
   lazy val lastSelectedBucket: Int = shards(lastSelectedShard).numSelected - 1
   lazy val lastSelectedCost: Double = round(shards(lastSelectedShard).buckets(lastSelectedBucket).cost)
+  lazy val lastSelectedImpact: Double = round(shards(lastSelectedShard).buckets(lastSelectedBucket).impact)
   lazy val lastSelectedPostings: Long = shards(lastSelectedShard).buckets(lastSelectedBucket).postings
   lazy val totalPostings: Long = shards.map(_.postings).sum
   lazy val postingsRelative: Double = round(postings.toDouble / totalPostings.toDouble)
@@ -138,6 +139,7 @@ object VerboseSelector extends LazyLogging {
       "last_bucket",
       "last_cost",
       "last_postings",
+      "last_impact",
       "last#relevant",
       overlaps.map(o => s"last#top_$o").mkString(",")
     ).mkString(","))
@@ -165,6 +167,7 @@ object VerboseSelector extends LazyLogging {
         selector.lastSelectedBucket,
         selector.lastSelectedCost,
         selector.lastSelectedPostings,
+        selector.lastSelectedImpact,
         selector.numRelevantInLastSelected(),
         overlaps.map(selector.numTopInLastSelected).mkString(",")
       ).mkString(","))
