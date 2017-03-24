@@ -212,8 +212,8 @@ object VerboseSelector extends LazyLogging {
         .action((x, c) => c.copy(shardPenalty = x))
         .text("shard penalty")
 
-      opt[Double]('m', "max-shards")
-        .action((x, c) => c.copy(shardPenalty = x))
+      opt[Int]('m', "max-shards")
+        .action((x, c) => c.copy(maxShards = x))
         .text("maximum number of shards to select")
 
     }

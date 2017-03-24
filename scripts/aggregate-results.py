@@ -1,8 +1,6 @@
 import argparse
 from sys import stdout
 
-
-
 parser = argparse.ArgumentParser(description='Aggregate OSS-format results', prog='aggregate-results')
 parser.add_argument('basename', help='Basename of the results')
 parser.add_argument('--trec-measures', '-t', nargs='*', default=['P_10', 'P_30'])
