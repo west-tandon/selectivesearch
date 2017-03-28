@@ -7,6 +7,7 @@ import edu.nyu.tandon._
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.data.results.FlatResults
+import edu.nyu.tandon.utils.WriteLineIterator._
 import scopt.OptionParser
 
 /**
@@ -26,7 +27,8 @@ object BucketizeResults extends LazyLogging {
   def main(args: Array[String]): Unit = {
 
     case class Config(basename: String = null,
-                      bucketizeCosts: Boolean = true)
+                      bucketizeCosts: Boolean = true,
+                      bucketizeDocRank: Boolean = true)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -38,6 +40,10 @@ object BucketizeResults extends LazyLogging {
       opt[Boolean]('c', "cost")
         .action((x, c) => c.copy(bucketizeCosts = x))
         .text("whether to bucketize costs (requires costs among input files)")
+
+      opt[Boolean]('r', "docrank")
+        .action((x, c) => c.copy(bucketizeDocRank = x))
+        .text("whether to bucketize docranks (requires *.docrank among input files)")
 
     }
 
@@ -65,6 +71,7 @@ object BucketizeResults extends LazyLogging {
               .store(config.basename)
 
             if (config.bucketizeCosts) bucketizeCosts(config.basename, features, shardId, bucketCount)
+            if (config.bucketizeDocRank) bucketizeDocRank(config.basename, features, shardId, bucketSize)
 
           case None =>
 
@@ -83,6 +90,7 @@ object BucketizeResults extends LazyLogging {
                 .store(s"${config.basename}#$shardId")
 
               if (config.bucketizeCosts) bucketizeCosts(config.basename, features, shardId, bucketCount)
+              if (config.bucketizeDocRank) bucketizeDocRank(config.basename, features, shardId, bucketSize)
             }
 
         }
@@ -99,6 +107,17 @@ object BucketizeResults extends LazyLogging {
       for (w <- writers) w.append(s"$unitCost\n")
     }
     for (w <- writers) w.close()
+  }
+
+  def bucketizeDocRank(basename: String, features: Features, shardId: Int, bucketSize: Long): Unit = {
+    val bucketizedRanks = features.docRanks(shardId).toList.zipWithIndex.groupBy{
+      case (rank, id) => (id / bucketSize).toInt
+    }.mapValues(_.map(_._1))
+    for (bucketId <- bucketizedRanks.keys) {
+      val ranks = bucketizedRanks(bucketId)
+      ranks.write(Path.toDocRank(basename, shardId, bucketId))
+      Seq(ranks.sum / ranks.length).write(Path.toBucketRank(basename, shardId, bucketId))
+    }
   }
 
 }

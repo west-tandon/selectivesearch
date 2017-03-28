@@ -68,6 +68,8 @@ object Path {
   def toScores(basename: String): String = toAny(basename, s"$ResultsSuffix$ScoresSuffix")
   def toScores(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, s"$ResultsSuffix$ScoresSuffix")
   def toGlobalResults(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, s"$ResultsSuffix$GlobalSuffix")
+  def toDocRank(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".docrank")
+  def toBucketRank(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketrank")
 
 //  def absolute(path: String): String = path.head match {
 //    case '/' => path

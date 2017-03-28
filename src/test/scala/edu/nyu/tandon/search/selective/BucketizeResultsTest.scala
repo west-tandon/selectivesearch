@@ -5,6 +5,7 @@ import java.nio.file.{Files, Paths}
 import edu.nyu.tandon.search.selective.BucketizeResults._
 import edu.nyu.tandon.search.selective.Path._
 import edu.nyu.tandon.test.BaseFunSuite
+import edu.nyu.tandon.utils.Lines
 import org.scalatest.Matchers._
 
 /**
@@ -70,7 +71,7 @@ class BucketizeResultsTest extends BaseFunSuite {
       val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.cost|test\\.sizes|test#.\\.results.*|.*properties|.*queries")
 
       // when
-      BucketizeResults.main(Array(s"$tmpDir/test#0"))
+      BucketizeResults.main(Array("--docrank=false", s"$tmpDir/test#0"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.head, getClass.getResource("/").getPath, tmpDir.toString)
@@ -85,7 +86,7 @@ class BucketizeResultsTest extends BaseFunSuite {
       val tmpDir = createTemporaryCopyOfResources(regex = "test\\.sizes|test#.\\.results.*|.*properties|.*queries")
 
       // when
-      BucketizeResults.main(Array("--cost=false", s"$tmpDir/test#0"))
+      BucketizeResults.main(Array("--docrank=false", "--cost=false", s"$tmpDir/test#0"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.head, getClass.getResource("/").getPath, tmpDir.toString)
@@ -97,13 +98,16 @@ class BucketizeResultsTest extends BaseFunSuite {
   test("main: all with costs") {
     new FilesWithScores {
       // given
-      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.cost|test\\.sizes|test#.\\.results.*|test#.\\.scores|.*properties|.*queries")
+      val tmpDir = createTemporaryCopyOfResources(regex = "test#.\\.cost|test\\.sizes|test#.\\.results.*|test#.\\.scores|.*properties|.*queries|test#.\\.docrank")
 
       // when
       BucketizeResults.main(Array(s"$tmpDir/test"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.flatten, getClass.getResource("/").getPath, tmpDir.toString)
+      Lines.fromFile(s"$tmpDir/test#0#0.bucketrank").of[Int](_.toInt).toList should contain theSameElementsInOrderAs List(49)
+      Lines.fromFile(s"$tmpDir/test#0#1.bucketrank").of[Int](_.toInt).toList should contain theSameElementsInOrderAs List(149)
+      Lines.fromFile(s"$tmpDir/test#0#2.bucketrank").of[Int](_.toInt).toList should contain theSameElementsInOrderAs List(249)
     }
   }
 
@@ -113,7 +117,7 @@ class BucketizeResultsTest extends BaseFunSuite {
       val tmpDir = createTemporaryCopyOfResources(regex = "test\\.sizes|test#.\\.results.*|test#.\\.scores|.*properties|.*queries")
 
       // when
-      BucketizeResults.main(Array("--cost=false", s"$tmpDir/test"))
+      BucketizeResults.main(Array("--docrank=false", "--cost=false", s"$tmpDir/test"))
 
       // then
       compareFilesBetweenDirectories(outputFileNames.flatten, getClass.getResource("/").getPath, tmpDir.toString)

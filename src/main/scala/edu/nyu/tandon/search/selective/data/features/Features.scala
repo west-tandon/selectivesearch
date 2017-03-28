@@ -88,6 +88,7 @@ class Features(val basename: String,
   /* Documents */
   def documentTitles: Iterator[String] = Lines.fromFile(s"$basename.titles")
   def baseResults: Iterator[Seq[Long]] = Lines.fromFile(s"$basename.results.global").ofSeq[Long]
+  def docRanks(shardId: Int): Iterator[Long] = Lines.fromFile(s"$basename#$shardId.docrank").of[Long]
   def shardResults: Iterator[IndexedSeq[Seq[Result]]] =
     ZippedIterator(
       for (s <- 0 until shardCount) yield {
