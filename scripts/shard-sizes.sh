@@ -12,4 +12,3 @@ do
         wc=`wc -l ${file} | cut -d" " -f1`
         echo "${number} ${wc}"
 done | sort -n | cut -d" " -f2
-ls ${basename}*-*t
