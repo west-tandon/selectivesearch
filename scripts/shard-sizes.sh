@@ -6,9 +6,10 @@
 basename=$1
 if [ -z "${basename}" ]; then echo "You have to define cluster basename (1)."; exit 1; fi;
 
-ls ${basename}*-*terms | while read file;
+ls ${basename}*-*titles | while read file;
 do
         number=`basename ${file} | sed "s/.*-//" | sed "s/\..*//"`
         wc=`wc -l ${file} | cut -d" " -f1`
         echo "${number} ${wc}"
 done | sort -n | cut -d" " -f2
+ls ${basename}*-*t

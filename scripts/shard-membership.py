@@ -16,7 +16,7 @@ for shard in args.shard_titles:
     shard_id = int(re.search("-(\d+)", shard).group(1))
     sys.stderr.write("Processing shard {}\n".format(shard_id))
     with open(shard) as shardf:
-        with open("{}#{}.membership".format(args.output_prefix, shard_id), 'w') as shardout:
+        with open("{}#{}.docrank".format(args.output_prefix, shard_id), 'w') as shardout:
             i = 0
             for shard_title in shardf.readlines():
                 try:
@@ -27,6 +27,6 @@ for shard in args.shard_titles:
                 membership[i] = shard_id
                 shardout.write("{}\n".format(i))
 
-with open(args.output_prefix + ".docrank", 'w') as f:
+with open(args.output_prefix + ".membership", 'w') as f:
     for m in membership:
         f.write("{}\n".format(m))

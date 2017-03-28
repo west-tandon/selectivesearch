@@ -105,9 +105,9 @@ class BucketizeResultsTest extends BaseFunSuite {
 
       // then
       compareFilesBetweenDirectories(outputFileNames.flatten, getClass.getResource("/").getPath, tmpDir.toString)
-      Lines.fromFile(s"$tmpDir/test#0#0.bucketrank").of[Int](_.toInt).toList should contain theSameElementsInOrderAs List(49)
-      Lines.fromFile(s"$tmpDir/test#0#1.bucketrank").of[Int](_.toInt).toList should contain theSameElementsInOrderAs List(149)
-      Lines.fromFile(s"$tmpDir/test#0#2.bucketrank").of[Int](_.toInt).toList should contain theSameElementsInOrderAs List(249)
+      Lines.fromFile(s"$tmpDir/test#0#0.bucketrank").of[Int](_.toInt).toList should contain theSameElementsInOrderAs List(49, 49)
+      Lines.fromFile(s"$tmpDir/test#0#1.bucketrank").of[Int](_.toInt).toList should contain theSameElementsInOrderAs List(149, 149)
+      Lines.fromFile(s"$tmpDir/test#0#2.bucketrank").of[Int](_.toInt).toList should contain theSameElementsInOrderAs List(249, 249)
     }
   }
 

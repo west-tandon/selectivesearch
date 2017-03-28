@@ -65,13 +65,13 @@ object BucketizeResults extends LazyLogging {
 
             logger.info(s"Bucketizing shard $shardId with bucket size $bucketSize")
 
-            FlatResults
+            val queryCount = FlatResults
               .fromFeatures(features, shardId, k)
               .bucketize(bucketSize, bucketCount)
               .store(config.basename)
 
             if (config.bucketizeCosts) bucketizeCosts(config.basename, features, shardId, bucketCount)
-            if (config.bucketizeDocRank) bucketizeDocRank(config.basename, features, shardId, bucketSize)
+            if (config.bucketizeDocRank) bucketizeDocRank(config.basename, features, shardId, bucketSize, queryCount)
 
           case None =>
 
@@ -84,13 +84,13 @@ object BucketizeResults extends LazyLogging {
             for ((bucketSize, shardId) <- bucketSizes.zipWithIndex) {
               logger.info(s"Bucketizing shard $shardId with bucket size $bucketSize")
 
-              FlatResults
+              val queryCount = FlatResults
                 .fromFeatures(features, shardId, k)
                 .bucketize(bucketSize, bucketCount)
                 .store(s"${config.basename}#$shardId")
 
               if (config.bucketizeCosts) bucketizeCosts(config.basename, features, shardId, bucketCount)
-              if (config.bucketizeDocRank) bucketizeDocRank(config.basename, features, shardId, bucketSize)
+              if (config.bucketizeDocRank) bucketizeDocRank(config.basename, features, shardId, bucketSize, queryCount)
             }
 
         }
@@ -109,14 +109,14 @@ object BucketizeResults extends LazyLogging {
     for (w <- writers) w.close()
   }
 
-  def bucketizeDocRank(basename: String, features: Features, shardId: Int, bucketSize: Long): Unit = {
+  def bucketizeDocRank(basename: String, features: Features, shardId: Int, bucketSize: Long, queryCount: Int): Unit = {
     val bucketizedRanks = features.docRanks(shardId).toList.zipWithIndex.groupBy{
       case (rank, id) => (id / bucketSize).toInt
     }.mapValues(_.map(_._1))
     for (bucketId <- bucketizedRanks.keys) {
       val ranks = bucketizedRanks(bucketId)
       ranks.write(Path.toDocRank(basename, shardId, bucketId))
-      Seq(ranks.sum / ranks.length).write(Path.toBucketRank(basename, shardId, bucketId))
+      List.fill(queryCount)(ranks.sum / ranks.length).write(Path.toBucketRank(basename, shardId, bucketId))
     }
   }
 
