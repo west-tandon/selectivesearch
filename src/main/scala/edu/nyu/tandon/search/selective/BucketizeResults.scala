@@ -116,7 +116,7 @@ object BucketizeResults extends LazyLogging {
     for (bucketId <- bucketizedRanks.keys) {
       val ranks = bucketizedRanks(bucketId)
       ranks.write(Path.toDocRank(basename, shardId, bucketId))
-      List.fill(queryCount)(ranks.sum / ranks.length).write(Path.toBucketRank(basename, shardId, bucketId))
+      Iterator.fill(queryCount)(ranks.sum / ranks.length).write(Path.toBucketRank(basename, shardId, bucketId))
     }
   }
 
