@@ -25,6 +25,6 @@ for shard in args.shard_titles:
                 membership[i] = shard_id
                 shardout.write("{}\n".format(i))
 
-with open(args.output_prefix + ".membership", 'w') as f:
+with open(args.output_prefix + ".docrank", 'w') as f:
     for m in membership:
         f.write("{}\n".format(m))
