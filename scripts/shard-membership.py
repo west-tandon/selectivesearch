@@ -1,4 +1,5 @@
 import argparse
+import sys
 import re
 
 parser = argparse.ArgumentParser(description='For documents in a global ordering, output their shard membership in the cluster', prog='shard-membership')
@@ -13,6 +14,7 @@ membership = [-1 for title in titles]
 
 for shard in args.shard_titles:
     shard_id = int(re.search("-(\d+)", shard).group(1))
+    sys.stderr.write("Processing shard {}\n".format(shard_id))
     with open(shard) as shardf:
         with open("{}#{}.membership".format(args.output_prefix, shard_id), 'w') as shardout:
             i = 0
