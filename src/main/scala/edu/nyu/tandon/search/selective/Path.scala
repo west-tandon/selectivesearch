@@ -69,7 +69,11 @@ object Path {
   def toScores(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, s"$ResultsSuffix$ScoresSuffix")
   def toGlobalResults(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, s"$ResultsSuffix$GlobalSuffix")
   def toDocRank(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".docrank")
-  def toBucketRank(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketrank")
+  def toBucketRankAvg(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketrankavg")
+  def toBucketRankSum(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketranksum")
+  def toBucketRankMin(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketrankmin")
+  def toBucketRankMax(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketrankmax")
+  def toBucketRankVar(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketrankvar")
 
 //  def absolute(path: String): String = path.head match {
 //    case '/' => path
