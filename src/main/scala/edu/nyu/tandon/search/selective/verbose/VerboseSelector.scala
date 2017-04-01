@@ -1,6 +1,6 @@
 package edu.nyu.tandon.search.selective.verbose
 
-import java.io.{BufferedWriter, FileWriter}
+import java.io.{BufferedWriter, FileNotFoundException, FileWriter}
 
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.Path
@@ -103,7 +103,11 @@ object VerboseSelector extends LazyLogging {
   def selectors(basename: String, shardPenalty: Double): Seq[VerboseSelector] = {
     val features = Features.get(Properties.get(basename))
     val base = features.baseResults.toList.map(_.map(_.toInt))
-    val qrels = features.qrelsReference
+    val qrels = try {
+      features.qrelsReference
+    } catch {
+      case e: FileNotFoundException => Seq.fill(base.length)(Seq())
+    }
     val data = ZippedIterator(for (shard <- 0 until features.shardCount) yield
       ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
         val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long].toIndexedSeq
