@@ -6,6 +6,7 @@ package edu.nyu.tandon.search.selective
 object Path {
 
   val CostSuffix = ".cost"
+  val PostingCostSuffix = ".postingcost"
   val PayoffSuffix = ".payoff"
   val QueriesSuffix = ".queries"
   val QueryLengthsSuffix = ".lengths"
@@ -28,6 +29,8 @@ object Path {
   val EvalSuffix = ".eval"
   val OverlapsSuffix = ".overlaps"
   val OverlapSuffix = ".overlap"
+  val PrecisionsSuffix = ".precisions"
+  val PrecisionSuffix = ".precision"
   val QRelsSuffix = ".qrels"
 
   private def toAny(basename: String, suffix: String): String = s"$basename$suffix"
@@ -49,6 +52,8 @@ object Path {
   def toCostModelEval(basename: String): String = s"${toCostModel(basename)}$EvalSuffix"
   def toOverlaps(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapsSuffix")
   def toOverlap(basename: String, k: Int): String = toAny(basename, s"@$k$OverlapSuffix")
+  def toPrecisions(basename: String, k: Int): String = toAny(basename, s"@$k$PrecisionsSuffix")
+  def toPrecision(basename: String, k: Int): String = toAny(basename, s"@$k$PrecisionSuffix")
   def toQRels(basename: String): String = toAny(basename, QRelsSuffix)
 
   /* Shard level */
@@ -56,12 +61,19 @@ object Path {
 
   /* Bucket level */
   def toCosts(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, CostSuffix)
+  def toPostingCosts(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, PostingCostSuffix)
   def toPayoffs(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, PayoffSuffix)
   def toLocalResults(basename: String): String = toAny(basename, s"$ResultsSuffix$LocalSuffix")
   def toGlobalResults(basename: String): String = toAny(basename, s"$ResultsSuffix$GlobalSuffix")
   def toScores(basename: String): String = toAny(basename, s"$ResultsSuffix$ScoresSuffix")
   def toScores(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, s"$ResultsSuffix$ScoresSuffix")
   def toGlobalResults(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, s"$ResultsSuffix$GlobalSuffix")
+  def toDocRank(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".docrank")
+  def toBucketRankAvg(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketrankavg")
+  def toBucketRankSum(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketranksum")
+  def toBucketRankMin(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketrankmin")
+  def toBucketRankMax(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketrankmax")
+  def toBucketRankVar(basename: String, shardId: Int, bucketId: Int): String = toAny(basename, shardId, bucketId, ".bucketrankvar")
 
 //  def absolute(path: String): String = path.head match {
 //    case '/' => path

@@ -14,11 +14,12 @@ object Titles2Map {
 
   val CommandName = "titles2map"
 
-  def titles2map(features: Features) = {
+  def titles2map(features: Features): Map[String, Int] = {
     val map = HashMap[String, Int](features.documentTitles.toSeq.zipWithIndex:_*)
     val oos = new ObjectOutputStream(new FileOutputStream(s"${features.basename}.titlemap"))
     oos.writeObject(map)
     oos.close()
+    map
   }
 
   def main(args: Array[String]): Unit = {

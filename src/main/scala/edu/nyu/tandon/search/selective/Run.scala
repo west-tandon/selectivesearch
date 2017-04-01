@@ -4,6 +4,7 @@ import edu.nyu.tandon.search.selective.clairvoyant.ClairvoyantSelector
 import edu.nyu.tandon.search.selective.learn.{LearnPayoffs, PredictCosts, PredictPayoffs, TrainCosts}
 import edu.nyu.tandon.search.selective.optimize.{BudgetOptimizer, PrecisionOptimizer}
 import edu.nyu.tandon.search.selective.select.SmartSelector
+import edu.nyu.tandon.search.selective.verbose.VerboseSelector
 import edu.nyu.tandon.search.stat.TPaired
 
 /**
@@ -29,7 +30,9 @@ object Run {
     (BudgetOptimizer.CommandName, BudgetOptimizer.main),
     (ClairvoyantSelector.CommandName, ClairvoyantSelector.main),
     (SmartSelector.CommandName, SmartSelector.main),
-    (TPaired.CommandName, TPaired.main)
+    (TPaired.CommandName, TPaired.main),
+    (Precision.CommandName, Precision.main),
+    (VerboseSelector.CommandName, VerboseSelector.main)
   )
 
   def printUsage(): Unit = {

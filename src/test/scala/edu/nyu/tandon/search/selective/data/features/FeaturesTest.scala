@@ -4,6 +4,7 @@ import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.results.Result
 import edu.nyu.tandon.test.BaseFunSuite
 import org.scalatest.Matchers._
+import edu.nyu.tandon.utils.WriteLineIterator._
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -110,6 +111,29 @@ class FeaturesTest extends BaseFunSuite {
       costs(0) should contain theSameElementsInOrderAs Seq(3, 3, 3)
       costs(1) should contain theSameElementsInOrderAs Seq(3, 3, 3)
     }
+  }
+
+  test("qrelsReference") {
+    val tmpDir = createTemporaryDir()
+    Seq(
+      "1 0 A 0",
+      "1 0 B 2",
+      "2 0 C 1",
+      "2 0 D -1",
+      "2 0 E 2"
+    ).write(s"$tmpDir/b.qrels")
+    Seq(
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+    ).write(s"$tmpDir/b.titles")
+    val f = new Features(s"$tmpDir/b", null)
+    f.qrelsReference should contain theSameElementsInOrderAs Seq(
+      Seq(1),
+      Seq(2, 4)
+    )
   }
 
 }

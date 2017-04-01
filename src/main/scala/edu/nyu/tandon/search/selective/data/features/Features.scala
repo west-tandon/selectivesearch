@@ -19,19 +19,20 @@ import scala.collection.immutable.HashMap
 class Features(val basename: String,
                val properties: Properties) extends LazyLogging {
 
-  lazy val titleMap: HashMap[String, Int] = {
-    val ois = try {
-      new ObjectInputStream(new FileInputStream(s"$basename.titlemap"))
+  lazy val titleMap: Map[String, Int] = {
+    val map = try {
+      val ois = new ObjectInputStream(new FileInputStream(s"$basename.titlemap"))
+      val m = ois.readObject().asInstanceOf[HashMap[String, Int]]
+      ois.close()
+      m
     } catch {
       case e: FileNotFoundException =>
-        logger.info("did not find the title map, proceeding with creating it before optimizing...")
-        Titles2Map.titles2map(this)
+        logger.info("did not find the title map, creating it before proceeding...")
+        val m = Titles2Map.titles2map(this)
         logger.info("title map created")
-        new ObjectInputStream(new FileInputStream(s"$basename.titlemap"))
+        m
     }
-    val map = ois.readObject().asInstanceOf[HashMap[String, Int]]
-    ois.close()
-    map
+    map.withDefaultValue(-1)
   }
 
   /* Shards */
@@ -71,15 +72,24 @@ class Features(val basename: String,
   def queryLengths: Iterator[Int] = Lines.fromFile(s"$basename.lengths").of[Int]
   def trecIds: Iterator[Long] = Lines.fromFile(s"$basename.trecid").of[Long]
   def qrelsReference: Seq[Seq[Int]] = {
-    val references = Lines.fromFile(s"$basename.qrels").ofSeq[String].toSeq.groupBy(_.head)
+    val references = Lines.fromFile(s"$basename.qrels").ofSeq.toSeq.groupBy(_.head)
     val sortedQueryIds = references.keys.map(intConverter).toIndexedSeq.sorted
     for (queryId <- sortedQueryIds)
-      yield references(s"$queryId").filter(_(3) != "0").map(_(2)).map(titleMap(_))
+      yield references(s"$queryId")
+        .filter(l => intConverter(l(3)) > 0)
+        .map(_(2))
+        .map(title => {
+          val id = titleMap(title)
+          if (id == -1) logger.warn(s"title $title is not in the mapping, falling back to default ID=-1")
+          id
+        })
   }
+  def complexFunctionResults: Seq[Seq[Int]] = Lines.fromFile(s"$basename.complex").ofSeq[Int].toList
 
   /* Documents */
   def documentTitles: Iterator[String] = Lines.fromFile(s"$basename.titles")
   def baseResults: Iterator[Seq[Long]] = Lines.fromFile(s"$basename.results.global").ofSeq[Long]
+  def docRanks(shardId: Int): Iterator[Long] = Lines.fromFile(s"$basename#$shardId.docrank").of[Long]
   def shardResults: Iterator[IndexedSeq[Seq[Result]]] =
     ZippedIterator(
       for (s <- 0 until shardCount) yield {
