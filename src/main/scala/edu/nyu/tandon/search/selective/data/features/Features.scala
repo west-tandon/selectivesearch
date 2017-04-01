@@ -84,6 +84,7 @@ class Features(val basename: String,
           id
         })
   }
+  def complexFunctionResults: Seq[Seq[Int]] = Lines.fromFile(s"$basename.complex").ofSeq[Int].toList
 
   /* Documents */
   def documentTitles: Iterator[String] = Lines.fromFile(s"$basename.titles")

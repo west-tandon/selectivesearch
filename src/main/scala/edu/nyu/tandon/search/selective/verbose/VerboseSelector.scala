@@ -23,7 +23,7 @@ class VerboseSelector(val shards: Seq[Shard],
                       val lastSelectedShard: Int = -1,
                       val cost: Double = 0,
                       val postings: Long = 0,
-                      maxTop: Int = 100,
+                      maxTop: Int = 500,
                       scale: Int = 4) {
 
   def topShards(n: Int): VerboseSelector = {
@@ -74,6 +74,7 @@ class VerboseSelector(val shards: Seq[Shard],
 
   def precisionAt(k: Int): Double = round(top.clone().dequeueAll.take(k).count(_.relevant).toDouble / k)
   def overlapAt(k: Int): Double = round(top.clone().dequeueAll.take(k).count(_.originalRank <= k).toDouble / k)
+  def complexRecall(k: Int): Double = round(top.clone().dequeueAll.count(_.complexRank <= k).toDouble / k)
 
   def numRelevantInLastSelected(): Int = {
     assert(lastSelectedShard >= 0 && lastSelectedShard < shards.length, "no last selection to report")
@@ -108,6 +109,11 @@ object VerboseSelector extends LazyLogging {
     } catch {
       case e: FileNotFoundException => Seq.fill(base.length)(Seq())
     }
+    val complex = try {
+      features.complexFunctionResults
+    } catch {
+      case e: FileNotFoundException => Seq.fill(base.length)(Seq())
+    }
     val data = ZippedIterator(for (shard <- 0 until features.shardCount) yield
       ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
         val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long].toIndexedSeq
@@ -115,12 +121,16 @@ object VerboseSelector extends LazyLogging {
         val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double].toIndexedSeq
         val postingCosts = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Long].toIndexedSeq
         val impacts = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double].toIndexedSeq
-        for ((res, bas, qr, score, cost, impact, postingCost) <-
+        for ((res, bas, qr, score, cost, impact, postingCost, complexResults) <-
              results.iterator.zip(base.iterator).flatZip(qrels.iterator).flatZip(scores.iterator)
-               .flatZip(costs.iterator).flatZip(impacts.iterator).flatZip(postingCosts.iterator)) yield {
+               .flatZip(costs.iterator).flatZip(impacts.iterator).flatZip(postingCosts.iterator).flatZip(complex.iterator)) yield {
           Bucket(shard, (for ((r, s) <- res.zip(score)) yield {
             Result(score = s, relevant = qr.contains(r), originalRank = {
               val idx = bas.indexOf(r)
+              if (idx < 0) Int.MaxValue
+              else idx
+            }, complexRank = {
+              val idx = complexResults.indexOf(r)
               if (idx < 0) Int.MaxValue
               else idx
             })
@@ -130,7 +140,7 @@ object VerboseSelector extends LazyLogging {
     data.map(new VerboseSelector(_)).toIndexedSeq
   }
 
-  def printHeader(precisions: Seq[Int], overlaps: Seq[Int])(writer: BufferedWriter): Unit = {
+  def printHeader(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int])(writer: BufferedWriter): Unit = {
     writer.write(Seq(
       "qid",
       "step",
@@ -139,6 +149,7 @@ object VerboseSelector extends LazyLogging {
       "postings_relative",
       precisions.map(p => s"P@$p").mkString(","),
       overlaps.map(o => s"O@$o").mkString(","),
+      complexRecalls.map(c => s"$c-CR").mkString(","),
       "last_shard",
       "last_bucket",
       "last_cost",
@@ -151,7 +162,7 @@ object VerboseSelector extends LazyLogging {
     writer.flush()
   }
 
-  def processSelector(precisions: Seq[Int], overlaps: Seq[Int], maxShards: Int)
+  def processSelector(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int], maxShards: Int)
                      (qid: Int, selector: VerboseSelector, writer: BufferedWriter): Unit = {
 
     @tailrec
@@ -167,6 +178,7 @@ object VerboseSelector extends LazyLogging {
         selector.postingsRelative,
         precisions.map(selector.precisionAt).mkString(","),
         overlaps.map(selector.overlapAt).mkString(","),
+        complexRecalls.map(selector.complexRecall).mkString(","),
         selector.lastSelectedShard,
         selector.lastSelectedBucket,
         selector.lastSelectedCost,
@@ -194,6 +206,7 @@ object VerboseSelector extends LazyLogging {
     case class Config(basename: String = null,
                       precisions: Seq[Int] = Seq(10, 30),
                       overlaps: Seq[Int] = Seq(10, 30),
+                      complexRecalls: Seq[Int] = Seq(10, 30),
                       maxShards: Int = Int.MaxValue,
                       shardPenalty: Double = 0.0)
 
@@ -211,6 +224,10 @@ object VerboseSelector extends LazyLogging {
       opt[Seq[Int]]('o', "overlaps")
         .action((x, c) => c.copy(overlaps = x))
         .text("k for which to compute O@k")
+
+      opt[Seq[Int]]('c', "complex-recalls")
+        .action((x, c) => c.copy(overlaps = x))
+        .text("k for which to compute k-CR")
 
       opt[Double]('P', "penalty")
         .action((x, c) => c.copy(shardPenalty = x))
@@ -230,12 +247,12 @@ object VerboseSelector extends LazyLogging {
 
         val writer = new BufferedWriter(new FileWriter(s"${config.basename}.verbose"))
 
-        printHeader(config.precisions, config.overlaps)(writer)
+        printHeader(config.precisions, config.overlaps, config.complexRecalls)(writer)
 
         for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
           logger.info(s"processing query $idx")
           logger.debug(s"total number of retrieved relevant documents: ${selector.shards.flatMap(_.buckets).flatMap(_.results).count(_.relevant)}")
-          processSelector(config.precisions, config.overlaps, config.maxShards)(idx, selector, writer)
+          processSelector(config.precisions, config.overlaps, config.complexRecalls, config.maxShards)(idx, selector, writer)
         }
 
         writer.close()
@@ -263,5 +280,6 @@ case class Bucket(shardId: Int,
 
 case class Result(score: Double,
                   relevant: Boolean,
-                  originalRank: Int) {
+                  originalRank: Int,
+                  complexRank: Int) {
 }
