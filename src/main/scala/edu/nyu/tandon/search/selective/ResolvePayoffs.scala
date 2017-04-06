@@ -46,7 +46,7 @@ object ResolvePayoffs extends LazyLogging {
           spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
             .join(baseResults
                 .select($"query", $"docid-global", $"ridx" as "ridx-base")
-                .filter($"ridx" < config.k),
+                .filter($"ridx-base" < config.k),
               Seq("query", "docid-global"))
             .groupBy($"query", $"shard", $"bucket")
             .count()
