@@ -5,7 +5,7 @@ import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import scopt.OptionParser
-import org.apache.spark.sql.functions.{count, when}
+import org.apache.spark.sql.functions.{count, when, sum}
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -50,7 +50,7 @@ object ResolvePayoffs extends LazyLogging {
               "leftouter")
             .withColumn("ridx-base-m", when($"ridx-base".isNull or ($"ridx-base" < config.k), 1).otherwise(0))
             .groupBy($"query", $"shard", $"bucket")
-            .sum("ridx-base-m")
+            .agg(sum("ridx-base-m"))
             .orderBy($"query", $"shard", $"bucket")
             .withColumnRenamed("count", "impact")
             .write
