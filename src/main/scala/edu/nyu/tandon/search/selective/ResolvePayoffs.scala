@@ -3,8 +3,7 @@ package edu.nyu.tandon.search.selective
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
-import edu.nyu.tandon.search.selective.data.payoff.Payoffs
-import org.apache.spark.sql.{Row, SparkSession}
+import org.apache.spark.sql.SparkSession
 import scopt.OptionParser
 
 /**
@@ -37,10 +36,10 @@ object ResolvePayoffs extends LazyLogging {
 
         val spark = SparkSession.builder().master("local").getOrCreate()
         import spark.implicits._
-        val baseResults = spark.read.parquet(s"${config.basename}.results")
+        val baseResults = spark.read.parquet(s"${features.basename}.results")
 
         for (shard <- 0 until features.shardCount) {
-          spark.read.parquet(s"${config.basename}#$shard.results")
+          spark.read.parquet(s"${features.basename}#$shard.results")
             .join(baseResults.select($"query", $"docid-global", $"ridx" as "ridx-base"),
               Seq("query", "docid-global"))
             .groupBy($"query", $"shard", $"bucket")
