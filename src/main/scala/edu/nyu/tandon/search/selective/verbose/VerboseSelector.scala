@@ -151,7 +151,7 @@ object VerboseSelector extends LazyLogging {
                 .select("ridx", "score", "ridx-base")
                 .orderBy("ridx")
                 .map {
-                  case Row(ridx: Int, score: Double, ridxBase: Int) =>
+                  case Row(ridx: Int, score: Float, ridxBase: Int) =>
                     //val originalRank = if (ridxBase is null) Int.MaxValue else ridxBase
                     Result(score, relevant = false, originalRank = ridxBase, Int.MaxValue)
                   case x => logger.error(s"couldn't match $x")
