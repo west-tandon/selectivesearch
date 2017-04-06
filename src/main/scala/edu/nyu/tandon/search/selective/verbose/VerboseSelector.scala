@@ -154,6 +154,8 @@ object VerboseSelector extends LazyLogging {
                   case Row(ridx: Int, score: Double, ridxBase: Int) =>
                     //val originalRank = if (ridxBase is null) Int.MaxValue else ridxBase
                     Result(score, relevant = false, originalRank = ridxBase, Int.MaxValue)
+                  case x => logger.error(s"couldn't match $x")
+                    throw new IllegalArgumentException()
                 }.collect().toSeq
               Bucket(shard, results, impact, cost, postings)
             }
