@@ -15,7 +15,8 @@ object ResolvePayoffs extends LazyLogging {
 
   def main(args: Array[String]): Unit = {
 
-    case class Config(basename: String = null)
+    case class Config(basename: String = null,
+                      k: Int = Int.MaxValue)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -23,6 +24,9 @@ object ResolvePayoffs extends LazyLogging {
         .action((x, c) => c.copy(basename = x))
         .text("the prefix of the files")
         .required()
+
+      opt[Int]('k', "at")
+        .action((x, c) => c.copy(k = x))
 
     }
 
@@ -40,7 +44,9 @@ object ResolvePayoffs extends LazyLogging {
 
         for (shard <- 0 until properties.shardCount) {
           spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
-            .join(baseResults.select($"query", $"docid-global", $"ridx" as "ridx-base"),
+            .join(baseResults
+                .select($"query", $"docid-global", $"ridx" as "ridx-base")
+                .filter($"ridx" < config.k)
               Seq("query", "docid-global"))
             .groupBy($"query", $"shard", $"bucket")
             .count()
