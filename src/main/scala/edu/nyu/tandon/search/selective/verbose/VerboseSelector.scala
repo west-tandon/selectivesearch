@@ -136,7 +136,9 @@ object VerboseSelector extends LazyLogging {
           val qBaseResults = baseResults.filter(queryCondition)
 
           val shards = for (shard <- 0 until properties.shardCount) yield {
+            logger.info(s"shard $shard")
             val buckets = for (bucket <- 0 until features.properties.bucketCount) yield {
+              logger.info(s"bucket $bucket")
               val bucketCondition = s"bucket = $bucket"
               val impacts = qImpacts(shard).filter(bucketCondition).select("impact")
               val impact: Float = if (impacts.count() > 0) impacts.head().getAs[Float]("impact") else 0
@@ -146,6 +148,7 @@ object VerboseSelector extends LazyLogging {
               }
               val Row(postings: Long) = qPostingCosts(shard).filter(bucketCondition).select("postingcost").head()
               val bShardResults = qShardResults(shard).filter(bucketCondition)
+              logger.info(s"processing results")
               val results = bShardResults
                 .join(
                   qBaseResults.select($"docid-global", $"ridx" as "ridx-base"),
@@ -161,6 +164,7 @@ object VerboseSelector extends LazyLogging {
                   case x => logger.error(s"couldn't match $x")
                     throw new IllegalArgumentException()
                 }.collect().toSeq
+              logger.info(s"results processed, creating bucket")
               Bucket(shard, results, impact, cost, postings)
             }
             new Shard(shard, buckets.toList)
