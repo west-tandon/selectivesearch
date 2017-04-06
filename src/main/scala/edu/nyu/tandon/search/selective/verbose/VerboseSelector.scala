@@ -100,17 +100,6 @@ object VerboseSelector extends LazyLogging {
 
   def selectors(basename: String, shardPenalty: Double): Iterator[VerboseSelector] = {
     val features = Features.get(Properties.get(basename))
-    val base = features.baseResults.toList.map(_.map(_.toInt))
-    val qrels = try {
-      features.qrelsReference
-    } catch {
-      case e: FileNotFoundException => Seq.fill(base.length)(Seq())
-    }
-    val complex = try {
-      features.complexFunctionResults
-    } catch {
-      case e: FileNotFoundException => Seq.fill(base.length)(Seq())
-    }
     val spark = SparkSession.builder().master("local").getOrCreate()
     import spark.implicits._
     val shardResults = for (shard <- 0 until features.shardCount) yield
