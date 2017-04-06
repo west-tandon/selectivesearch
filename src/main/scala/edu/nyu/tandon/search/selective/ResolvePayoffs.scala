@@ -48,7 +48,7 @@ object ResolvePayoffs extends LazyLogging {
             .join(baseResults.select($"query", $"docid-global", $"ridx" as "ridx-base"),
               Seq("query", "docid-global"),
               "leftouter")
-            .withColumn("y", when($"ridx-base".isNull or ($"ridx-base" < config.k), 1).otherwise(0))
+            .withColumn("y", when($"ridx-base".isNull or ($"ridx-base" >= config.k), 0).otherwise(1))
             .groupBy($"query", $"shard", $"bucket")
             .agg(sum("y").as("impact"))
             .orderBy($"query", $"shard", $"bucket")
