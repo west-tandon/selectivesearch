@@ -3,7 +3,7 @@ package edu.nyu.tandon.search.selective
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{SaveMode, SparkSession}
 import scopt.OptionParser
 
 /**
@@ -47,6 +47,7 @@ object ResolvePayoffs extends LazyLogging {
             .orderBy($"query", $"shard", $"bucket")
             .withColumnRenamed("count", "impact")
             .write
+            .mode(SaveMode.Overwrite)
             .parquet(s"${config.basename}#$shard.impacts")
         }
       case None =>
