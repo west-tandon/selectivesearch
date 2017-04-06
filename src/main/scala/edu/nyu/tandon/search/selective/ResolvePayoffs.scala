@@ -5,7 +5,7 @@ import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import scopt.OptionParser
-import org.apache.spark.sql.functions.count
+import org.apache.spark.sql.functions.{count, when}
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -45,13 +45,12 @@ object ResolvePayoffs extends LazyLogging {
 
         for (shard <- 0 until properties.shardCount) {
           spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
-            .join(baseResults
-                .select($"query", $"docid-global", $"ridx" as "ridx-base"),
-//                .filter($"ridx-base" < config.k),
+            .join(baseResults.select($"query", $"docid-global", $"ridx" as "ridx-base"),
               Seq("query", "docid-global"),
               "leftouter")
+            .withColumn("ridx-base-m", when($"ridx-base".isNull or ($"ridx-base" < config.k), 1).otherwise(0))
             .groupBy($"query", $"shard", $"bucket")
-            .agg(count($"ridx-base" < config.k))
+            .sum("ridx-base-m")
             .orderBy($"query", $"shard", $"bucket")
             .withColumnRenamed("count", "impact")
             .write
