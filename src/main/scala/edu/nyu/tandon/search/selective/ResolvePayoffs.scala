@@ -37,7 +37,7 @@ object ResolvePayoffs extends LazyLogging {
 
         val spark = SparkSession.builder().master("local").getOrCreate()
         import spark.implicits._
-        val baseResults = spark.read.parquet(s"$basename.results")
+        val baseResults = spark.read.parquet(s"${config.basename}.results")
 
         for (shard <- 0 until features.shardCount) {
           spark.read.parquet(s"${config.basename}#$shard.results")
