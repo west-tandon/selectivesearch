@@ -104,14 +104,14 @@ object VerboseSelector extends LazyLogging {
     val spark = SparkSession.builder().master("local").getOrCreate()
     import spark.implicits._
     val shardResults = for (shard <- 0 until properties.shardCount) yield
-      spark.read.parquet(s"${features.basename}#$shard.results")
+      spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
     val costs =
       if (new File(s"basename#0.cost").exists())
         Some(for (shard <- 0 until properties.shardCount) yield
           spark.read.parquet(s"$basename#$shard.cost"))
       else None
     val postingCosts = for (shard <- 0 until properties.shardCount) yield
-      spark.read.parquet(s"${features.basename}#$shard.postingcost")
+      spark.read.parquet(s"${features.basename}#$shard.postingcost-${properties.bucketCount}")
     val impacts = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"$basename#$shard.impacts")
     val baseResults = spark.read.parquet(s"${features.basename}.results")
