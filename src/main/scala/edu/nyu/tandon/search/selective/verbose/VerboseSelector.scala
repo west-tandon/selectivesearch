@@ -124,6 +124,7 @@ object VerboseSelector extends LazyLogging {
       .toIterator
       .map {
         case Row(queryId) =>
+          logger.info(s"creating selector $queryId")
           val queryCondition = s"query = $queryId"
           val qShardResults = shardResults.map(_.filter(queryCondition))
           val qCosts = costs match {
@@ -279,7 +280,7 @@ object VerboseSelector extends LazyLogging {
 
         for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
           logger.info(s"processing query $idx")
-          logger.debug(s"total number of retrieved relevant documents: ${selector.shards.flatMap(_.buckets).flatMap(_.results).count(_.relevant)}")
+          //logger.debug(s"total number of retrieved relevant documents: ${selector.shards.flatMap(_.buckets).flatMap(_.results).count(_.relevant)}")
           processSelector(config.precisions, config.overlaps, config.complexRecalls, config.maxShards)(idx, selector, writer)
         }
 
