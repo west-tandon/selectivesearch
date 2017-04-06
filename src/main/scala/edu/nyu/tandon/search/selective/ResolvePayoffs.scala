@@ -3,9 +3,10 @@ package edu.nyu.tandon.search.selective
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
+import org.apache.spark.sql.functions.{sum, when}
+import org.apache.spark.sql.types.FloatType
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import scopt.OptionParser
-import org.apache.spark.sql.functions.{count, when, sum}
 
 /**
   * @author michal.siedlaczek@nyu.edu
@@ -50,7 +51,7 @@ object ResolvePayoffs extends LazyLogging {
               "leftouter")
             .withColumn("y", when($"ridx-base".isNull or ($"ridx-base" >= config.k), 0).otherwise(1))
             .groupBy($"query", $"shard", $"bucket")
-            .agg(sum("y").as("impact"))
+            .agg(sum("y").as("impact").cast(FloatType))
             .orderBy($"query", $"shard", $"bucket")
             .write
             .mode(SaveMode.Overwrite)
