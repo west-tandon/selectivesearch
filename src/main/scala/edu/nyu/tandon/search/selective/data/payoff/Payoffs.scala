@@ -56,15 +56,31 @@ object Payoffs {
     val properties = Properties.get(basename)
     val features = Features.get(properties)
 
-    val baseResults = features.baseResults
-    val bucketGlobalResults = Load.bucketizedGlobalResultsAt(basename)
+    val spark = SparkSession.builder().master("local").getOrCreate()
+    val shardResults = for (shard <- 0 until features.shardCount) yield
+      spark.read.parquet(s"$basename#$shard.results")
+    val baseResults = spark.read.parquet(s"$basename.results")
+    val queryFeatures = spark.read.parquet(s"$basename.queryfeatures")
 
-    new Payoffs(
-      for ((baseResultsForQuery, bucketizedGlobalResultsForQuery) <- baseResults zip bucketGlobalResults) yield
-        for (bucketizedGlobalResultsForShard <- bucketizedGlobalResultsForQuery) yield
-          for (bucketizedGlobalResultsForBucket <- bucketizedGlobalResultsForShard) yield
-            bucketizedGlobalResultsForBucket.count(baseResultsForQuery.contains(_)).toDouble
-    )
+    queryFeatures.select("query")
+      .orderBy("query")
+      .collect()
+      .toIterator
+      .map {
+        case Row(queryId) =>
+
+      }
+
+    ???
+    //val baseResults = features.baseResults
+    //val bucketGlobalResults = Load.bucketizedGlobalResultsAt(basename)
+
+    //new Payoffs(
+    //  for ((baseResultsForQuery, bucketizedGlobalResultsForQuery) <- baseResults zip bucketGlobalResults) yield
+    //    for (bucketizedGlobalResultsForShard <- bucketizedGlobalResultsForQuery) yield
+    //      for (bucketizedGlobalResultsForBucket <- bucketizedGlobalResultsForShard) yield
+    //        bucketizedGlobalResultsForBucket.count(baseResultsForQuery.contains(_)).toDouble
+    //)
   }
 
   def fromRegressionModel(basename: String, model: RandomForestRegressionModel): Payoffs = {

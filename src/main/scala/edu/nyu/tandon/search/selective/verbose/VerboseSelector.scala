@@ -1,15 +1,12 @@
 package edu.nyu.tandon.search.selective.verbose
 
-import java.io.{BufferedWriter, FileNotFoundException, FileWriter}
+import java.io.{BufferedWriter, File, FileNotFoundException, FileWriter}
 
 import com.typesafe.scalalogging.LazyLogging
-import edu.nyu.tandon.search.selective.Path
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.verbose.VerboseSelector.scoreOrdering
-import edu.nyu.tandon.utils.Lines._
-import edu.nyu.tandon.utils.TupleIterators._
-import edu.nyu.tandon.utils.{Lines, ZippedIterator}
+import org.apache.spark.sql.{Row, SparkSession}
 import scopt.OptionParser
 
 import scala.annotation.tailrec
@@ -101,7 +98,7 @@ object VerboseSelector extends LazyLogging {
 
   val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
 
-  def selectors(basename: String, shardPenalty: Double): Seq[VerboseSelector] = {
+  def selectors(basename: String, shardPenalty: Double): Iterator[VerboseSelector] = {
     val features = Features.get(Properties.get(basename))
     val base = features.baseResults.toList.map(_.map(_.toInt))
     val qrels = try {
@@ -114,30 +111,66 @@ object VerboseSelector extends LazyLogging {
     } catch {
       case e: FileNotFoundException => Seq.fill(base.length)(Seq())
     }
-    val data = ZippedIterator(for (shard <- 0 until features.shardCount) yield
-      ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
-        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long].toIndexedSeq
-        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double].toIndexedSeq
-        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double].toIndexedSeq
-        val postingCosts = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Long].toIndexedSeq
-        val impacts = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double].toIndexedSeq
-        for ((res, bas, qr, score, cost, impact, postingCost, complexResults) <-
-             results.iterator.zip(base.iterator).flatZip(qrels.iterator).flatZip(scores.iterator)
-               .flatZip(costs.iterator).flatZip(impacts.iterator).flatZip(postingCosts.iterator).flatZip(complex.iterator)) yield {
-          Bucket(shard, (for ((r, s) <- res.zip(score)) yield {
-            Result(score = s, relevant = qr.contains(r), originalRank = {
-              val idx = bas.indexOf(r)
-              if (idx < 0) Int.MaxValue
-              else idx
-            }, complexRank = {
-              val idx = complexResults.indexOf(r)
-              if (idx < 0) Int.MaxValue
-              else idx
-            })
-          }).toList, impact, cost, postingCost, penalty = if (bucket == 0) shardPenalty else 0.0)
-        }
-      }).map(l => new Shard(shard, l.toList)))
-    data.map(new VerboseSelector(_)).toIndexedSeq
+    val spark = SparkSession.builder().master("local").getOrCreate()
+    import spark.implicits._
+    val shardResults = for (shard <- 0 until features.shardCount) yield
+      spark.read.parquet(s"$basename#$shard.results")
+    val costs =
+      if (new File(s"basename#0.cost").exists())
+        Some(for (shard <- 0 until features.shardCount) yield
+          spark.read.parquet(s"$basename#$shard.cost"))
+      else None
+    val postingCosts = for (shard <- 0 until features.shardCount) yield
+      spark.read.parquet(s"$basename#$shard.postingcost")
+    val impacts = for (shard <- 0 until features.shardCount) yield
+      spark.read.parquet(s"$basename#$shard.impacts")
+    val baseResults = spark.read.parquet(s"$basename.results")
+    val queryFeatures = spark.read.parquet(s"$basename.queryfeatures")
+
+    queryFeatures.select("query")
+      .orderBy("query")
+      .collect()
+      .toIterator
+      .map {
+        case Row(queryId) =>
+          val queryCondition = s"query = $queryId"
+          val qShardResults = shardResults.map(_.filter(queryCondition))
+          val qCosts = costs match {
+            case Some(cst) => Some(cst.map (_.filter (queryCondition) ))
+            case None => None
+          }
+          val qPostingCosts = postingCosts.map(_.filter(queryCondition))
+          val qImpacts = impacts.map(_.filter(queryCondition))
+          val qBaseResults = baseResults.filter(queryCondition)
+
+          val shards = for (shard <- 0 until features.shardCount) yield {
+            val buckets = for (bucket <- 0 until features.properties.bucketCount) yield {
+              val bucketCondition = s"bucket = $bucket"
+              val Row(impact: Float) = qImpacts(shard).filter(bucketCondition).select("impact").head()
+              val Row(cost: Float) = qCosts match {
+                case Some(qc) => qc(shard).filter(bucketCondition).select("cost").head()
+                case None => 1.0 / features.properties.bucketCount
+              }
+              val Row(postings: Long) = qPostingCosts(shard).filter(bucketCondition).select("postingcost").head()
+              val bShardResults = qShardResults(shard).filter(bucketCondition)
+              val results = bShardResults
+                .join(
+                  qBaseResults.select($"docid-global", $"ridx" as "ridx-base"),
+                  Seq("docid-global"),
+                  "left_outer")
+                .select("ridx", "score", "ridx-base")
+                .orderBy("ridx")
+                .map {
+                  case Row(ridx: Int, score: Double, ridxBase: Int) =>
+                    //val originalRank = if (ridxBase is null) Int.MaxValue else ridxBase
+                    Result(score, relevant = false, originalRank = ridxBase, Int.MaxValue)
+                }.collect().toSeq
+              Bucket(shard, results, impact, cost, postings)
+            }
+            new Shard(shard, buckets.toList)
+          }
+          new VerboseSelector(shards)
+      }
   }
 
   def printHeader(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int])(writer: BufferedWriter): Unit = {
