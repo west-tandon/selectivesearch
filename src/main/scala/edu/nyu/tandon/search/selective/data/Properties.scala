@@ -27,6 +27,7 @@ class Properties(val file: String) {
 
   lazy val featuresPath: String = getProperty("features")
   lazy val bucketCount: Int = getProperty("buckets.count").toInt
+  lazy val shardCount: Int = getProperty("shards.count").toInt
   lazy val k: Int = getProperty("k").toInt
   lazy val payoffLabel: String = getProperty("features.payoff.label")
   lazy val costLabel: String = getProperty("features.cost.label")

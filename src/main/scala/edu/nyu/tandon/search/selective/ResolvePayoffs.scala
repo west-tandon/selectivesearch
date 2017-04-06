@@ -38,7 +38,7 @@ object ResolvePayoffs extends LazyLogging {
         import spark.implicits._
         val baseResults = spark.read.parquet(s"${features.basename}.results")
 
-        for (shard <- 0 until features.shardCount) {
+        for (shard <- 0 until properties.shardCount) {
           spark.read.parquet(s"${features.basename}#$shard.results")
             .join(baseResults.select($"query", $"docid-global", $"ridx" as "ridx-base"),
               Seq("query", "docid-global"))
