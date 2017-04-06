@@ -49,7 +49,7 @@ object ResolvePayoffs extends LazyLogging {
                 .select($"query", $"docid-global", $"ridx" as "ridx-base"),
 //                .filter($"ridx-base" < config.k),
               Seq("query", "docid-global"),
-              "outer_left")
+              "leftouter")
             .groupBy($"query", $"shard", $"bucket")
             .agg(count($"ridx-base" < config.k))
             .orderBy($"query", $"shard", $"bucket")

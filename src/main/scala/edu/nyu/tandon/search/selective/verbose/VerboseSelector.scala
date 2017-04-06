@@ -157,7 +157,7 @@ object VerboseSelector extends LazyLogging {
                 .join(
                   qBaseResults.select($"docid-global", $"ridx" as "ridx-base"),
                   Seq("docid-global"),
-                  "left_outer")
+                  "leftouter")
                 .select("ridx", "score", "ridx-base")
                 .orderBy("ridx")
                 .map {
