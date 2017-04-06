@@ -1,6 +1,6 @@
 package edu.nyu.tandon.search.selective.verbose
 
-import java.io.{BufferedWriter, File, FileNotFoundException, FileWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.Properties
@@ -99,19 +99,20 @@ object VerboseSelector extends LazyLogging {
   val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
 
   def selectors(basename: String, shardPenalty: Double): Iterator[VerboseSelector] = {
-    val features = Features.get(Properties.get(basename))
+    val properties = Properties.get(basename)
+    val features = Features.get(properties)
     val spark = SparkSession.builder().master("local").getOrCreate()
     import spark.implicits._
-    val shardResults = for (shard <- 0 until features.shardCount) yield
+    val shardResults = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"${features.basename}#$shard.results")
     val costs =
       if (new File(s"basename#0.cost").exists())
-        Some(for (shard <- 0 until features.shardCount) yield
+        Some(for (shard <- 0 until properties.shardCount) yield
           spark.read.parquet(s"$basename#$shard.cost"))
       else None
-    val postingCosts = for (shard <- 0 until features.shardCount) yield
+    val postingCosts = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"${features.basename}#$shard.postingcost")
-    val impacts = for (shard <- 0 until features.shardCount) yield
+    val impacts = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"$basename#$shard.impacts")
     val baseResults = spark.read.parquet(s"${features.basename}.results")
     val queryFeatures = spark.read.parquet(s"${features.basename}.queryfeatures")
@@ -132,7 +133,7 @@ object VerboseSelector extends LazyLogging {
           val qImpacts = impacts.map(_.filter(queryCondition))
           val qBaseResults = baseResults.filter(queryCondition)
 
-          val shards = for (shard <- 0 until features.shardCount) yield {
+          val shards = for (shard <- 0 until properties.shardCount) yield {
             val buckets = for (bucket <- 0 until features.properties.bucketCount) yield {
               val bucketCondition = s"bucket = $bucket"
               val Row(impact: Float) = qImpacts(shard).filter(bucketCondition).select("impact").head()
