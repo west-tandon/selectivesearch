@@ -32,7 +32,8 @@ object Run {
     (SmartSelector.CommandName, SmartSelector.main),
     (TPaired.CommandName, TPaired.main),
     (Precision.CommandName, Precision.main),
-    (VerboseSelector.CommandName, VerboseSelector.main)
+    (VerboseSelector.CommandName, VerboseSelector.main),
+    (Status.CommandName, Status.main)
   )
 
   def printUsage(): Unit = {

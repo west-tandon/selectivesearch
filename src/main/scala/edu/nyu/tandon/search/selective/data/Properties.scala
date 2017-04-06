@@ -10,6 +10,8 @@ import edu.nyu.tandon.search.selective.data.features.Features
   */
 class Properties(val file: String) {
 
+  val basename: String = "\\.properties$".r.replaceAllIn(file, "")
+
   lazy val props: java.util.Properties = {
     val properties = new java.util.Properties()
     properties.load(new FileInputStream(file))
