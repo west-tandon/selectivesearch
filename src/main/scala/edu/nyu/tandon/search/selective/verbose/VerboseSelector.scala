@@ -8,6 +8,7 @@ import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.verbose.VerboseSelector.scoreOrdering
 import org.apache.spark.sql.{Row, SparkSession}
 import scopt.OptionParser
+import org.apache.spark.sql.functions.{sum, when}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -149,10 +150,11 @@ object VerboseSelector extends LazyLogging {
                   Seq("docid-global"),
                   "leftouter")
                 .select("ridx", "score", "ridx-base")
+                .withColumn("fixed-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
+                .drop("ridx-base")
                 .orderBy("ridx")
                 .map {
                   case Row(ridx: Int, score: Float, ridxBase: Int) =>
-                    //val originalRank = if (ridxBase is null) Int.MaxValue else ridxBase
                     Result(score, relevant = false, originalRank = ridxBase, Int.MaxValue)
                   case x => logger.error(s"couldn't match $x")
                     throw new IllegalArgumentException()
