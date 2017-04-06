@@ -50,9 +50,8 @@ object ResolvePayoffs extends LazyLogging {
               "leftouter")
             .withColumn("y", when($"ridx-base".isNull or ($"ridx-base" < config.k), 1).otherwise(0))
             .groupBy($"query", $"shard", $"bucket")
-            .agg(sum("y"))
+            .agg(sum("y").as("impact"))
             .orderBy($"query", $"shard", $"bucket")
-            .withColumnRenamed("count", "impact")
             .write
             .mode(SaveMode.Overwrite)
             .parquet(s"${config.basename}#$shard.impacts")
