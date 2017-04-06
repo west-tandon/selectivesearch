@@ -137,7 +137,8 @@ object VerboseSelector extends LazyLogging {
           val shards = for (shard <- 0 until properties.shardCount) yield {
             val buckets = for (bucket <- 0 until features.properties.bucketCount) yield {
               val bucketCondition = s"bucket = $bucket"
-              val Row(impact: Float) = qImpacts(shard).filter(bucketCondition).select("impact").head()
+              val impacts = qImpacts(shard).filter(bucketCondition).select("impact")
+              val impact: Float = if (impacts.count() > 0) impacts.head().getAs[Float]("impact") else 0
               val Row(cost: Float) = qCosts match {
                 case Some(qc) => qc(shard).filter(bucketCondition).select("cost").head()
                 case None => Row((1.0 / features.properties.bucketCount).toFloat)
