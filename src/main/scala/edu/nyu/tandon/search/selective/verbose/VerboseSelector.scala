@@ -152,7 +152,7 @@ object VerboseSelector extends LazyLogging {
             val buckets = for (((impact, postings), bucket) <- qImpacts(shard).zip(qPostingCosts(shard)).zipWithIndex) yield {
               val results = qShardResults(shard).filter($"bucket".equalTo(bucket))
                 .select("docid-global", "docid-local", "score", "ridx")
-                .join(qBaseResults.select($"docid-global", $"rdix" as "ridx-base"),
+                .join(qBaseResults.select($"docid-global", $"ridx" as "ridx-base"),
                   Seq("docid-global"), "leftouter")
                 .select("ridx", "score", "ridx-base")
                 .withColumn("fixed-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
