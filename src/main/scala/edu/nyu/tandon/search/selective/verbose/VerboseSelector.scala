@@ -124,7 +124,7 @@ object VerboseSelector extends LazyLogging {
       .collect()
       .toIterator
       .map {
-        case Row(queryId) =>
+        case Row(queryId: Int) =>
           logger.info(s"creating selector $queryId")
           //val queryCondition = s"query = $queryId"
           //val qShardResults = shardResults.map(_.filter(queryCondition).cache())
@@ -141,6 +141,8 @@ object VerboseSelector extends LazyLogging {
               (queryId, shard, bucket)
             }).flatten.toDF("query", "shard", "bucket")
 
+          logger.info("base DF created")
+
           val data = base
             .join(impacts.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
             .join(postingCosts.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
@@ -152,6 +154,7 @@ object VerboseSelector extends LazyLogging {
             .withColumn("not-null-ridx-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
             .orderBy("shard", "bucket", "ridx")
             .collect()
+          logger.info("data collected")
 
           def bucketGroupBy(row: Row): (Int, Long, Double) =
             (row.getAs[Int]("bucket"),
@@ -170,6 +173,7 @@ object VerboseSelector extends LazyLogging {
             }
             Shard(shard, buckets.toList)
           }
+          logger.info("shard created")
 
           //val shards = for ((shard, shardResult) <- results) yield {
           //  for ((bucket, bucketResults) <- shardResults) yield
