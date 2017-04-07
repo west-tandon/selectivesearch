@@ -6,9 +6,9 @@ import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.verbose.VerboseSelector.scoreOrdering
+import org.apache.spark.sql.functions.when
 import org.apache.spark.sql.{Row, SparkSession}
 import scopt.OptionParser
-import org.apache.spark.sql.functions.{sum, when}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -135,6 +135,9 @@ object VerboseSelector extends LazyLogging {
           val qImpacts = impacts.map(_.filter(queryCondition))
           val qBaseResults = baseResults.filter(queryCondition)
 
+          // TODO: Try joins???
+
+
           val shards = for (shard <- 0 until properties.shardCount) yield {
             logger.info(s"shard $shard")
             val buckets = for (bucket <- 0 until features.properties.bucketCount) yield {
@@ -164,7 +167,7 @@ object VerboseSelector extends LazyLogging {
                   case x => logger.error(s"couldn't match $x")
                     throw new IllegalArgumentException()
                 }.collect().toSeq
-              logger.info(s"results processed, creating bucket")
+              logger.info(s"results processed (${results.length} results), creating bucket")
               Bucket(shard, results, impact, cost, postings)
             }
             new Shard(shard, buckets.toList)
