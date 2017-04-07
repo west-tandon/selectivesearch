@@ -126,17 +126,14 @@ object VerboseSelector extends LazyLogging {
         case Row(queryId) =>
           logger.info(s"creating selector $queryId")
           val queryCondition = s"query = $queryId"
-          val qShardResults = shardResults.map(_.filter(queryCondition))
+          val qShardResults = shardResults.map(_.filter(queryCondition).cache())
           val qCosts = costs match {
-            case Some(cst) => Some(cst.map (_.filter (queryCondition) ))
+            case Some(cst) => Some(cst.map(_.filter(queryCondition).cache()))
             case None => None
           }
-          val qPostingCosts = postingCosts.map(_.filter(queryCondition))
-          val qImpacts = impacts.map(_.filter(queryCondition))
-          val qBaseResults = baseResults.filter(queryCondition)
-
-          // TODO: Try joins???
-
+          val qPostingCosts = postingCosts.map(_.filter(queryCondition).cache())
+          val qImpacts = impacts.map(_.filter(queryCondition).cache())
+          val qBaseResults = baseResults.filter(queryCondition).cache()
 
           val shards = for (shard <- 0 until properties.shardCount) yield {
             logger.info(s"shard $shard")
