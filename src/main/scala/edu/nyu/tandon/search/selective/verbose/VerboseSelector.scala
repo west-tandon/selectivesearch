@@ -151,16 +151,18 @@ object VerboseSelector extends LazyLogging {
           val shards = for (shard <- 0 until properties.shardCount) yield {
             val buckets = for (((impact, postings), bucket) <- qImpacts(shard).zip(qPostingCosts(shard)).zipWithIndex) yield {
               val results = qShardResults(shard).filter($"bucket".equalTo(bucket))
-                .select("docid-global", "docid-local", "score", "ridx")
-                .join(qBaseResults.select($"docid-global", $"ridx" as "ridx-base"),
-                  Seq("docid-global"), "leftouter")
-                .select("ridx", "score", "ridx-base")
-                .withColumn("fixed-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
-                .drop("ridx-base")
+                //.select("docid-global", "docid-local", "score", "ridx")
+                //.join(qBaseResults.select($"docid-global", $"ridx" as "ridx-base"),
+                //  Seq("docid-global"), "leftouter")
+                //.select("ridx", "score", "ridx-base")
+                //.withColumn("fixed-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
+                //.drop("ridx-base")
+                  .select("ridx", "score")
                 .orderBy("ridx")
                 .map {
-                  case Row(ridx: Int, score: Float, ridxBase: Int) =>
-                    Result(score, relevant = false, originalRank = ridxBase, Int.MaxValue)
+                  //case Row(ridx: Int, score: Float, ridxBase: Int) =>
+                  case Row(ridx: Int, score: Float) =>
+                    Result(score, relevant = false, originalRank = Int.MaxValue, Int.MaxValue)
                   case x => logger.error(s"couldn't match $x")
                     throw new IllegalArgumentException()
                 }.collect().toSeq
