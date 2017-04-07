@@ -135,24 +135,36 @@ object VerboseSelector extends LazyLogging {
           val qPostingCosts = postingCosts.map(_.filter(queryCondition)
             .orderBy("bucket")
             .select($"postingcost")
-            .collect()
             .map {
               case Row(postings: Long) => postings
-            })
+            }.collect())
           val qImpacts = impacts.map(_.filter(queryCondition)
             .orderBy("bucket")
             .select($"impact")
-            .collect()
             .map {
               case Row(impact: Float) => impact
-            })
+            }.collect())
           val qBaseResults = baseResults.filter(queryCondition).cache()
 
           logger.info("data cached")
 
           val shards = for (shard <- 0 until properties.shardCount) yield {
             val buckets = for (((impact, postings), bucket) <- qImpacts(shard).zip(qPostingCosts(shard)).zipWithIndex) yield {
-              Bucket(shard, Seq(), impact, 1.0 / properties.bucketCount, postings)
+              val results = qShardResults(shard).filter($"bucket".equalTo(bucket))
+                .select("docid-global", "docid-local", "score", "ridx")
+                .join(qBaseResults.filter($"bucket".equalTo(bucket)).select($"docid-global", $"rdix" as "ridx-base"),
+                  Seq("docid-global"), "leftouter")
+                .select("ridx", "score", "ridx-base")
+                .withColumn("fixed-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
+                .drop("ridx-base")
+                .orderBy("ridx")
+                .map {
+                  case Row(ridx: Int, score: Float, ridxBase: Int) =>
+                    Result(score, relevant = false, originalRank = ridxBase, Int.MaxValue)
+                  case x => logger.error(s"couldn't match $x")
+                    throw new IllegalArgumentException()
+                }.collect().toSeq
+              Bucket(shard, results, impact, 1.0 / properties.bucketCount, postings)
             }
             Shard(shard, buckets.toList)
           }
