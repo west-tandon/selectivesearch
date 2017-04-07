@@ -126,60 +126,62 @@ object VerboseSelector extends LazyLogging {
       .map {
         case Row(queryId: Int) =>
           logger.info(s"creating selector $queryId")
-          //val queryCondition = s"query = $queryId"
-          //val qShardResults = shardResults.map(_.filter(queryCondition).cache())
-          //val qCosts = costs match {
-          //  case Some(cst) => Some(cst.map(_.filter(queryCondition).cache()))
-          //  case None => None
-          //}
-          //val qPostingCosts = postingCosts.map(_.filter(queryCondition).cache())
-          //val qImpacts = impacts.map(_.filter(queryCondition).cache())
-          //val qBaseResults = baseResults.filter(queryCondition).cache()
-
-          val base = (for (shard <- 0 until properties.shardCount) yield
-            for (bucket <- 0 until properties.bucketCount) yield {
-              (queryId, shard, bucket)
-            }).flatten.toDF("query", "shard", "bucket")
-
-          logger.info("base DF created")
-
-          val data = base
-            .join(impacts.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
-            .join(postingCosts.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
-            .join(shardResults.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
-            .join(
-              baseResults.select($"docid-global", $"ridx" as "ridx-base"),
-              Seq("docid-global")
-            )
-            .withColumn("not-null-ridx-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
-            .orderBy("shard", "bucket", "ridx")
-            .collect()
-          logger.info("data collected")
-
-          def bucketGroupBy(row: Row): (Int, Long, Double) =
-            (row.getAs[Int]("bucket"),
-              row.getAs[Long]("postingcost"),
-              row.getAs[Double]("impact"))
-
-          val shards = for ((shard, shardData) <- data.groupBy(_.getAs[Int]("shard"))) yield {
-            val buckets = for (((bucket, postings, impact), bucketData) <- shardData.groupBy(bucketGroupBy)) yield {
-              val results = for (row <- bucketData) yield Result(
-                row.getAs[Double]("score"),
-                relevant = false,
-                originalRank = row.getAs[Int]("not-null-ridx-base"),
-                complexRank = Int.MaxValue
-              )
-              Bucket(shard, results, impact, 1.0 / properties.bucketCount, postings)
-            }
-            Shard(shard, buckets.toList)
+          val queryCondition = s"query = $queryId"
+          val qShardResults = shardResults.map(_.filter(queryCondition).cache())
+          val qCosts = costs match {
+            case Some(cst) => Some(cst.map(_.filter(queryCondition).cache()))
+            case None => None
           }
-          logger.info("shard created")
+          val qPostingCosts = postingCosts.map(_.filter(queryCondition).cache())
+          val qImpacts = impacts.map(_.filter(queryCondition).cache())
+          val qBaseResults = baseResults.filter(queryCondition).cache()
+
+          logger.info("data cached")
+
+          //val base = (for (shard <- 0 until properties.shardCount) yield
+          //  for (bucket <- 0 until properties.bucketCount) yield {
+          //    (queryId, shard, bucket)
+          //  }).flatten.toDF("query", "shard", "bucket")
+
+          //logger.info("base DF created")
+
+          //val data = base
+          //  .join(impacts.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
+          //  .join(postingCosts.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
+          //  .join(shardResults.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
+          //  .join(
+          //    baseResults.select($"docid-global", $"ridx" as "ridx-base"),
+          //    Seq("docid-global")
+          //  )
+          //  .withColumn("not-null-ridx-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
+          //  .orderBy("shard", "bucket", "ridx")
+          //  .collect()
+          //logger.info("data collected")
+
+          //def bucketGroupBy(row: Row): (Int, Long, Double) =
+          //  (row.getAs[Int]("bucket"),
+          //    row.getAs[Long]("postingcost"),
+          //    row.getAs[Double]("impact"))
+
+          //val shards = for ((shard, shardData) <- data.groupBy(_.getAs[Int]("shard"))) yield {
+          //  val buckets = for (((bucket, postings, impact), bucketData) <- shardData.groupBy(bucketGroupBy)) yield {
+          //    val results = for (row <- bucketData) yield Result(
+          //      row.getAs[Double]("score"),
+          //      relevant = false,
+          //      originalRank = row.getAs[Int]("not-null-ridx-base"),
+          //      complexRank = Int.MaxValue
+          //    )
+          //    Bucket(shard, results, impact, 1.0 / properties.bucketCount, postings)
+          //  }
+          //  Shard(shard, buckets.toList)
+          //}
+          //logger.info("shard created")
 
           //val shards = for ((shard, shardResult) <- results) yield {
           //  for ((bucket, bucketResults) <- shardResults) yield
           //    Bucket(shard, bucketResults, )
           //}
-          new VerboseSelector(shards.toList)
+          new VerboseSelector(List())
           /*val shards = for (shard <- 0 until properties.shardCount) yield {
             logger.info(s"shard $shard")
             val buckets = for (bucket <- 0 until properties.bucketCount) yield {
