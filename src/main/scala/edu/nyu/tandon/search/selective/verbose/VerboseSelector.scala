@@ -132,11 +132,32 @@ object VerboseSelector extends LazyLogging {
             case Some(cst) => Some(cst.map(_.filter(queryCondition).cache()))
             case None => None
           }
-          val qPostingCosts = postingCosts.map(_.filter(queryCondition).cache())
-          val qImpacts = impacts.map(_.filter(queryCondition).cache())
+          val qPostingCosts = postingCosts.map(_.filter(queryCondition)
+            .orderBy("bucket")
+            .select($"postingcost")
+            .collect()
+            .map {
+              case Row(postings: Long) => postings
+            })
+          val qImpacts = impacts.map(_.filter(queryCondition)
+            .orderBy("bucket")
+            .select($"impact")
+            .collect()
+            .map {
+              case Row(impact: Float) => impact
+            })
           val qBaseResults = baseResults.filter(queryCondition).cache()
 
           logger.info("data cached")
+
+          val shards = for (shard <- 0 until properties.shardCount) yield {
+            val buckets = for (((impact, postings), bucket) <- qImpacts(shard).zip(qPostingCosts(shard)).zipWithIndex) yield {
+              Bucket(shard, Seq(), impact, 1.0 / properties.bucketCount, postings)
+            }
+            Shard(shard, buckets.toList)
+          }
+
+          new VerboseSelector(shards)
 
           //val base = (for (shard <- 0 until properties.shardCount) yield
           //  for (bucket <- 0 until properties.bucketCount) yield {
@@ -181,7 +202,6 @@ object VerboseSelector extends LazyLogging {
           //  for ((bucket, bucketResults) <- shardResults) yield
           //    Bucket(shard, bucketResults, )
           //}
-          new VerboseSelector(List())
           /*val shards = for (shard <- 0 until properties.shardCount) yield {
             logger.info(s"shard $shard")
             val buckets = for (bucket <- 0 until properties.bucketCount) yield {
