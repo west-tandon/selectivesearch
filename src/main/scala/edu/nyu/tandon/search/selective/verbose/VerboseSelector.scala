@@ -109,7 +109,7 @@ object VerboseSelector extends LazyLogging {
     logger.info("loading data")
 
     val shardResults = for (shard <- 0 until properties.shardCount) yield {
-      val parquet = spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
+      val parquet = spark.read.parquet(s"${features.basename}#$shard.labeledresults-${properties.bucketCount}")
       val columns = Seq("query", "bucket", "score", "relevant", "baseorder", "complexorder")
         .intersect(parquet.schema.fieldNames)
       val relevantExists = columns.contains("relevant")
