@@ -54,7 +54,7 @@ object LabelResults extends LazyLogging {
           labeledResults.select(columns.head, columns.drop(1):_*)
             .write
             .mode(SaveMode.Overwrite)
-            .parquet(s"${features.basename}.labeledresults-${properties.bucketCount}")
+            .parquet(s"${features.basename}#$shard.labeledresults-${properties.bucketCount}")
 
         }
 
