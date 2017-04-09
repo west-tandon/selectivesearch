@@ -105,19 +105,56 @@ object VerboseSelector extends LazyLogging {
     val features = Features.get(properties)
     val spark = SparkSession.builder().master("local").getOrCreate()
     import spark.implicits._
+
+    logger.info("loading data")
+
     val shardResults = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
-    val costs =
-      if (new File(s"basename#0.cost").exists())
-        Some(for (shard <- 0 until properties.shardCount) yield
-          spark.read.parquet(s"$basename#$shard.cost"))
-      else None
+        .select($"query", $"bucket", $"score")
+        .map {
+          case Row(query: Int, bucket: Int, score: Float) => (query, bucket, score)
+        }.collect()
+        .groupBy(_._1)
+        .mapValues(_.groupBy(_._2).mapValues(_.map{
+          case (_, _, score) => Result(score, relevant = false, Int.MaxValue, Int.MaxValue)
+        }))
+
+    //val costs =
+    //  if (new File(s"basename#0.cost").exists())
+    //    Some(for (shard <- 0 until properties.shardCount) yield
+    //      spark.read.parquet(s"$basename#$shard.cost"))
+    //  else None
+
     val postingCosts = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"${features.basename}#$shard.postingcost-${properties.bucketCount}")
+        .select($"query", $"bucket", $"postingcost")
+        .map {
+          case Row(query: Int, bucket: Int, postingCost: Long) => (query, bucket, postingCost)
+        }.collect()
+        .groupBy(_._1)
+        .mapValues(_.groupBy(_._2).mapValues(postingCostList => {
+          assert(postingCostList.length == 1,
+            s"there must be exactly 1 postingCost value for (query, shard, bucket) but ${postingCostList.length} found")
+          postingCostList.head._3
+        }))
+
     val impacts = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"$basename#$shard.impacts")
-    val baseResults = spark.read.parquet(s"${features.basename}.results")
+        .select($"query", $"bucket", $"impact")
+        .map {
+          case Row(query: Int, bucket: Int, impact: Float) => (query, bucket, impact)
+        }.collect()
+        .groupBy(_._1)
+        .mapValues(_.groupBy(_._2).mapValues(impactList => {
+          assert(impactList.length == 1,
+            s"there must be exactly 1 impact value for (query, shard, bucket) but ${impactList.length} found")
+          impactList.head._3
+        }))
+
+    //val baseResults = spark.read.parquet(s"${features.basename}.results")
     val queryFeatures = spark.read.parquet(s"${features.basename}.queryfeatures")
+
+    logger.info("data loaded")
 
     queryFeatures.select("query")
       .orderBy("query")
@@ -125,131 +162,26 @@ object VerboseSelector extends LazyLogging {
       .toIterator
       .map {
         case Row(queryId: Int) =>
-          logger.info(s"creating selector $queryId")
-          val queryCondition = s"query = $queryId"
-          val qShardResults = shardResults.map(_.filter(queryCondition).cache())
-          val qCosts = costs match {
-            case Some(cst) => Some(cst.map(_.filter(queryCondition).cache()))
-            case None => None
-          }
-          val qPostingCosts = postingCosts.map(_.filter(queryCondition)
-            .orderBy("bucket")
-            .select($"postingcost")
-            .map {
-              case Row(postings: Long) => postings
-            }.collect())
-          val qImpacts = impacts.map(_.filter(queryCondition)
-            .orderBy("bucket")
-            .select($"impact")
-            .map {
-              case Row(impact: Float) => impact
-            }.collect())
-          val qBaseResults = baseResults.filter(queryCondition).cache()
 
-          logger.info("data cached")
+          logger.info(s"creating selector $queryId")
+
+          val queryCondition = s"query = $queryId"
 
           val shards = for (shard <- 0 until properties.shardCount) yield {
-            val buckets = for (((impact, postings), bucket) <- qImpacts(shard).zip(qPostingCosts(shard)).zipWithIndex) yield {
-              val results = qShardResults(shard).filter($"bucket".equalTo(bucket))
-                //.select("docid-global", "docid-local", "score", "ridx")
-                //.join(qBaseResults.select($"docid-global", $"ridx" as "ridx-base"),
-                //  Seq("docid-global"), "leftouter")
-                //.select("ridx", "score", "ridx-base")
-                //.withColumn("fixed-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
-                //.drop("ridx-base")
-                  .select("ridx", "score")
-                .orderBy("ridx")
-                .map {
-                  //case Row(ridx: Int, score: Float, ridxBase: Int) =>
-                  case Row(ridx: Int, score: Float) =>
-                    Result(score, relevant = false, originalRank = Int.MaxValue, Int.MaxValue)
-                  case x => logger.error(s"couldn't match $x")
-                    throw new IllegalArgumentException()
-                }.collect().toSeq
-              Bucket(shard, results, impact, 1.0 / properties.bucketCount, postings)
+            val qResults = shardResults(shard)(queryId)
+            val qImpacts = impacts(shard)(queryId)
+            val qPostingCosts = postingCosts(shard)(queryId)
+            val buckets = for (bucket <- 0 until properties.bucketCount) yield {
+              Bucket(shard,
+                qResults(bucket),
+                qImpacts(bucket),
+                cost = 1.0 / properties.bucketCount,
+                qPostingCosts(bucket))
             }
             Shard(shard, buckets.toList)
           }
 
           new VerboseSelector(shards)
-
-          //val base = (for (shard <- 0 until properties.shardCount) yield
-          //  for (bucket <- 0 until properties.bucketCount) yield {
-          //    (queryId, shard, bucket)
-          //  }).flatten.toDF("query", "shard", "bucket")
-
-          //logger.info("base DF created")
-
-          //val data = base
-          //  .join(impacts.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
-          //  .join(postingCosts.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
-          //  .join(shardResults.reduce(_.union(_)), Seq("query", "shard", "bucket"), "leftouter")
-          //  .join(
-          //    baseResults.select($"docid-global", $"ridx" as "ridx-base"),
-          //    Seq("docid-global")
-          //  )
-          //  .withColumn("not-null-ridx-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
-          //  .orderBy("shard", "bucket", "ridx")
-          //  .collect()
-          //logger.info("data collected")
-
-          //def bucketGroupBy(row: Row): (Int, Long, Double) =
-          //  (row.getAs[Int]("bucket"),
-          //    row.getAs[Long]("postingcost"),
-          //    row.getAs[Double]("impact"))
-
-          //val shards = for ((shard, shardData) <- data.groupBy(_.getAs[Int]("shard"))) yield {
-          //  val buckets = for (((bucket, postings, impact), bucketData) <- shardData.groupBy(bucketGroupBy)) yield {
-          //    val results = for (row <- bucketData) yield Result(
-          //      row.getAs[Double]("score"),
-          //      relevant = false,
-          //      originalRank = row.getAs[Int]("not-null-ridx-base"),
-          //      complexRank = Int.MaxValue
-          //    )
-          //    Bucket(shard, results, impact, 1.0 / properties.bucketCount, postings)
-          //  }
-          //  Shard(shard, buckets.toList)
-          //}
-          //logger.info("shard created")
-
-          //val shards = for ((shard, shardResult) <- results) yield {
-          //  for ((bucket, bucketResults) <- shardResults) yield
-          //    Bucket(shard, bucketResults, )
-          //}
-          /*val shards = for (shard <- 0 until properties.shardCount) yield {
-            logger.info(s"shard $shard")
-            val buckets = for (bucket <- 0 until properties.bucketCount) yield {
-              //logger.info(s"bucket $bucket")
-              val bucketCondition = s"bucket = $bucket"
-              val impacts = qImpacts(shard).filter(bucketCondition).select("impact").cache()
-              val impact: Float = if (impacts.count() > 0) impacts.head().getAs[Float]("impact") else 0
-              val Row(cost: Float) = qCosts match {
-                case Some(qc) => qc(shard).filter(bucketCondition).select("cost").head()
-                case None => Row((1.0 / features.properties.bucketCount).toFloat)
-              }
-              val Row(postings: Long) = qPostingCosts(shard).filter(bucketCondition).select("postingcost").head()
-              val bShardResults = qShardResults(shard).filter(bucketCondition)
-              //logger.info(s"processing results")
-              val results = bShardResults
-                .join(
-                  qBaseResults.select($"docid-global", $"ridx" as "ridx-base"),
-                  Seq("docid-global"),
-                  "leftouter")
-                .select("ridx", "score", "ridx-base")
-                .withColumn("fixed-base", when($"ridx-base".isNotNull, $"ridx-base").otherwise(Int.MaxValue))
-                .drop("ridx-base")
-                .orderBy("ridx")
-                .map {
-                  case Row(ridx: Int, score: Float, ridxBase: Int) =>
-                    Result(score, relevant = false, originalRank = ridxBase, Int.MaxValue)
-                  case x => logger.error(s"couldn't match $x")
-                    throw new IllegalArgumentException()
-                }.collect().toSeq
-              //logger.info(s"results processed (${results.length} results), creating bucket")
-              Bucket(shard, results, impact, cost, postings)
-            }
-            new Shard(shard, buckets.toList)
-          }*/
       }
   }
 
