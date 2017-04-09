@@ -108,16 +108,29 @@ object VerboseSelector extends LazyLogging {
 
     logger.info("loading data")
 
-    val shardResults = for (shard <- 0 until properties.shardCount) yield
-      spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
-        .select($"query", $"bucket", $"score")
-        .map {
-          case Row(query: Int, bucket: Int, score: Float) => (query, bucket, score)
-        }.collect()
+    val shardResults = for (shard <- 0 until properties.shardCount) yield {
+      val parquet = spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
+      val columns = Seq("query", "bucket", "score", "relevant", "baseorder", "complexorder")
+        .intersect(parquet.schema.fieldNames)
+      val relevantExists = columns.contains("relevant")
+      val baseOrderExists = columns.contains("baseorder")
+      val complexOrderExists = columns.contains("complexorder")
+      parquet
+        .select(columns.head, columns.drop(1):_*)
+        .map (row => {
+          val query = row.getInt(0)
+          val bucket = row.getInt(1)
+          val score = row.getFloat(2)
+          val relevant = if (relevantExists) row.getAs[Boolean]("relevant") else false
+          val baseOrder = if (baseOrderExists) row.getAs[Int]("baseorder") else Int.MaxValue
+          val complexOrder = if (complexOrderExists) row.getAs[Int]("complexorder") else Int.MaxValue
+          (query, bucket, score, relevant, baseOrder, complexOrder)
+        }).collect()
         .groupBy(_._1)
-        .mapValues(_.groupBy(_._2).mapValues(_.map{
+        .mapValues(_.groupBy(_._2).mapValues(_.map {
           case (_, _, score) => Result(score, relevant = false, Int.MaxValue, Int.MaxValue)
         }))
+    }
 
     //val costs =
     //  if (new File(s"basename#0.cost").exists())
