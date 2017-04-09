@@ -52,6 +52,7 @@ object LabelResults extends LazyLogging {
 
           val columns = shardResults.columns ++ Array("relevant", "baseorder")
           labeledResults.select(columns.head, columns.drop(1):_*)
+            .orderBy("query", "bucket", "ridx")
             .write
             .mode(SaveMode.Overwrite)
             .parquet(s"${features.basename}#$shard.labeledresults-${properties.bucketCount}")
