@@ -36,7 +36,7 @@ class Features(val basename: String,
   }
 
   /* Shards */
-  lazy val shardCount: Int = shardSizes.length
+  lazy val shardCount: Int = properties.shardCount
   lazy val shardSizes: IndexedSeq[Long] = Lines.fromFile(s"$basename.sizes").of[Long].toIndexedSeq
   lazy val avgTime: Double = Lines.fromFile(s"$basename.time.avg").of[Double].next()
   def shardSize(id: Int): Long = shardSizes(id)
