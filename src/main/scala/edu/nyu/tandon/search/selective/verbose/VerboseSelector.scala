@@ -169,18 +169,24 @@ object VerboseSelector extends LazyLogging {
 
           val shards = for (shard <- 0 until properties.shardCount) yield {
             val qResults = shardResults(shard).get(queryId)
-            val qImpacts = impacts(shard)(queryId)
+            val qImpacts = impacts(shard).get(queryId)
             val qPostingCosts = postingCosts(shard)(queryId)
             val buckets = for (bucket <- 0 until properties.bucketCount) yield {
               Bucket(shard,
                 qResults match {
-                  case Some(qSomeResults) => qSomeResults.get(bucket) match {
+                  case Some(someResults) => someResults.get(bucket) match {
                     case Some(results) => results
                     case None => Seq()
                   }
                   case None => Seq()
                 },
-                qImpacts(bucket),
+                qImpacts match {
+                  case Some(someImpacts) => someImpacts.get(bucket) match {
+                    case Some(impact) => impact
+                    case None => 0.0
+                  }
+                  case None => 0.0
+                },
                 cost = 1.0 / properties.bucketCount,
                 qPostingCosts(bucket))
             }
