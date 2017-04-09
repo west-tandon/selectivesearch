@@ -128,7 +128,8 @@ object VerboseSelector extends LazyLogging {
         }).collect()
         .groupBy(_._1)
         .mapValues(_.groupBy(_._2).mapValues(_.map {
-          case (_, _, score) => Result(score, relevant = false, Int.MaxValue, Int.MaxValue)
+          case (_, _, score, relevant, baseOrder, complexOrder) =>
+            Result(score, relevant, baseOrder, complexOrder)
         }))
     }
 
