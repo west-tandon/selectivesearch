@@ -44,14 +44,14 @@ object LabelResults extends LazyLogging {
 
           val shardResults = spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
 
-          shardResults
+          val labeledResults = shardResults
             .join(baseResults.select($"query", $"docid-global", $"ridx" as "base-ridx"), Seq("query", "docid-global"), "leftouter")
             .join(relevantResults.select($"query", $"docid-global", $"docid-global" as "relevant-indicator"), Seq("query", "docid-global"), "leftouter")
             .withColumn("relevant", when($"relevant-indicator".isNotNull, true).otherwise(false))
             .withColumn("baseorder", when($"base-ridx".isNotNull, $"base-ridx").otherwise(Int.MaxValue))
 
           val columns = shardResults.columns ++ Array("relevant", "baseorder")
-          shardResults.select(columns.head, columns.drop(1):_*)
+          labeledResults.select(columns.head, columns.drop(1):_*)
             .write
             .mode(SaveMode.Overwrite)
             .parquet(s"${features.basename}.labeledresults-${properties.bucketCount}")
