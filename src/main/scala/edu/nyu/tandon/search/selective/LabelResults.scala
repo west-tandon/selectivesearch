@@ -36,7 +36,7 @@ object LabelResults extends LazyLogging {
         val spark = SparkSession.builder().master("local").getOrCreate()
         import spark.implicits._
 
-        val baseResults = spark.read.parquet(s"${features.basename}.results-${properties.bucketCount}")
+        val baseResults = spark.read.parquet(s"${features.basename}.results")
         val relevantResults = spark.read.parquet(s"${features.basename}.relevance")
         for (shard <- 0 until properties.shardCount) {
 
