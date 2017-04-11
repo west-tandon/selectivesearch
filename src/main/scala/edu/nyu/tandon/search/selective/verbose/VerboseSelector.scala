@@ -120,7 +120,7 @@ object VerboseSelector extends LazyLogging {
         .map (row => {
           val query = row.getInt(0)
           val bucket = row.getInt(1)
-          val score = row.getFloat(2)
+          val score = row.getDouble(2)
           val relevant = if (relevantExists) row.getAs[Boolean]("relevant") else false
           val baseOrder = if (baseOrderExists) row.getAs[Int]("baseorder") else Int.MaxValue
           val complexOrder = if (complexOrderExists) row.getAs[Int]("complexorder") else Int.MaxValue
@@ -156,7 +156,7 @@ object VerboseSelector extends LazyLogging {
       spark.read.parquet(s"$basename#$shard.impacts")
         .select($"query", $"bucket", $"impact")
         .map {
-          case Row(query: Int, bucket: Int, impact: Float) => (query, bucket, impact)
+          case Row(query: Int, bucket: Int, impact: Double) => (query, bucket, impact)
         }.collect()
         .groupBy(_._1)
         .mapValues(_.groupBy(_._2).mapValues(impactList => {
