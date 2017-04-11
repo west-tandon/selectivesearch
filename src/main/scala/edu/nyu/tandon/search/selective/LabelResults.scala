@@ -1,11 +1,13 @@
 package edu.nyu.tandon.search.selective
 
+import java.io.File
+
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
-import org.apache.spark.sql
-import org.apache.spark.sql.{SaveMode, SparkSession}
+import edu.nyu.tandon.unfolder
 import org.apache.spark.sql.functions.when
+import org.apache.spark.sql.{SaveMode, SparkSession}
 import scopt.OptionParser
 
 /**
@@ -53,9 +55,12 @@ object LabelResults extends LazyLogging {
           val columns = shardResults.columns ++ Array("relevant", "baseorder")
           labeledResults.select(columns.head, columns.drop(1):_*)
             .orderBy("query", "bucket", "rank")
+            .coalesce(1)
             .write
             .mode(SaveMode.Overwrite)
             .parquet(s"${features.basename}#$shard.labeledresults-${properties.bucketCount}")
+
+          unfolder(new File(s"${features.basename}#$shard.labeledresults-${properties.bucketCount}"))
 
         }
 

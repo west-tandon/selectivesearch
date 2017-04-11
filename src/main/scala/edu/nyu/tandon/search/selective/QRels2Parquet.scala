@@ -1,7 +1,10 @@
 package edu.nyu.tandon.search.selective
 
+import java.io.File
+
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
+import edu.nyu.tandon.unfolder
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import scopt.OptionParser
 
@@ -43,9 +46,12 @@ object QRels2Parquet {
         }
 
         rows.flatten.toDF("query", "gdocid")
+          .coalesce(1)
           .write
           .mode(SaveMode.Overwrite)
           .parquet(s"${features.basename}.relevance")
+
+        unfolder(new File(s"${features.basename}.relevance"))
 
       case None =>
     }

@@ -46,10 +46,10 @@ object ResolvePayoffs extends LazyLogging {
 
         for (shard <- 0 until properties.shardCount) {
           spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
-            .join(baseResults.select($"query", $"docid-global", $"ridx" as "ridx-base"),
-              Seq("query", "docid-global"),
+            .join(baseResults.select($"query", $"gdocid", $"rank" as "rank-base"),
+              Seq("query", "gdocid"),
               "leftouter")
-            .withColumn("y", when($"ridx-base".isNull or ($"ridx-base" >= config.k), 0).otherwise(1))
+            .withColumn("y", when($"rank-base".isNull or ($"rank-base" >= config.k), 0).otherwise(1))
             .groupBy($"query", $"shard", $"bucket")
             .agg(sum("y").cast(FloatType).as("impact"))
             .orderBy($"query", $"shard", $"bucket")
