@@ -1,8 +1,11 @@
 package edu.nyu.tandon.search.selective
 
+import java.io.File
+
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
+import edu.nyu.tandon.unfolder
 import org.apache.spark.sql.functions.{sum, when}
 import org.apache.spark.sql.types.FloatType
 import org.apache.spark.sql.{SaveMode, SparkSession}
@@ -53,9 +56,11 @@ object ResolvePayoffs extends LazyLogging {
             .groupBy($"query", $"shard", $"bucket")
             .agg(sum("y").cast(FloatType).as("impact"))
             .orderBy($"query", $"shard", $"bucket")
+            .coalesce(1)
             .write
             .mode(SaveMode.Overwrite)
             .parquet(s"${config.basename}#$shard.impacts")
+          unfolder(new File(s"${config.basename}#$shard.impacts"))
         }
       case None =>
     }
