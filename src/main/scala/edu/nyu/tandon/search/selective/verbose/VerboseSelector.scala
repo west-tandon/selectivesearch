@@ -165,7 +165,6 @@ object VerboseSelector extends LazyLogging {
           impactList.head._3
         }))
 
-    //val baseResults = spark.read.parquet(s"${features.basename}.results")
     val queryFeatures = spark.read.parquet(s"${features.basename}.queryfeatures")
 
     logger.info("data loaded")

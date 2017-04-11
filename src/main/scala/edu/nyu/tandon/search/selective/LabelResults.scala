@@ -45,14 +45,14 @@ object LabelResults extends LazyLogging {
           val shardResults = spark.read.parquet(s"${features.basename}#$shard.results-${properties.bucketCount}")
 
           val labeledResults = shardResults
-            .join(baseResults.select($"query", $"docid-global", $"ridx" as "base-ridx"), Seq("query", "docid-global"), "leftouter")
-            .join(relevantResults.select($"query", $"docid-global", $"docid-global" as "relevant-indicator"), Seq("query", "docid-global"), "leftouter")
+            .join(baseResults.select($"query", $"gdocid", $"rank" as "base-rank"), Seq("query", "gdocid"), "leftouter")
+            .join(relevantResults.select($"query", $"gdocid", $"gdocid" as "relevant-indicator"), Seq("query", "gdocid"), "leftouter")
             .withColumn("relevant", when($"relevant-indicator".isNotNull, true).otherwise(false))
-            .withColumn("baseorder", when($"base-ridx".isNotNull, $"base-ridx").otherwise(Int.MaxValue))
+            .withColumn("baseorder", when($"base-rank".isNotNull, $"base-rank").otherwise(Int.MaxValue))
 
           val columns = shardResults.columns ++ Array("relevant", "baseorder")
           labeledResults.select(columns.head, columns.drop(1):_*)
-            .orderBy("query", "bucket", "ridx")
+            .orderBy("query", "bucket", "rank")
             .write
             .mode(SaveMode.Overwrite)
             .parquet(s"${features.basename}#$shard.labeledresults-${properties.bucketCount}")
