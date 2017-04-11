@@ -42,7 +42,7 @@ object QRels2Parquet {
           }
         }
 
-        rows.flatten.toDF("query", "docid-global")
+        rows.flatten.toDF("query", "gdocid")
           .write
           .mode(SaveMode.Overwrite)
           .parquet(s"${features.basename}.relevance")
