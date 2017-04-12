@@ -59,7 +59,7 @@ object LabelResults extends LazyLogging {
             .withColumn("baseorder", when($"base-rank".isNotNull, $"base-rank").otherwise(Int.MaxValue))
             .withColumn("complexorder", when($"complex-rank".isNotNull, $"complex-rank").otherwise(Int.MaxValue))
 
-          val columns = shardResults.columns ++ Array("relevant", "baseorder")
+          val columns = shardResults.columns ++ Array("relevant", "baseorder", "complexorder")
           labeledResults.select(columns.head, columns.drop(1):_*)
             .orderBy("query", "bucket", "rank")
             .coalesce(1)
