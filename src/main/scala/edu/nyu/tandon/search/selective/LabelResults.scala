@@ -40,6 +40,10 @@ object LabelResults extends LazyLogging {
 
         val baseResults = spark.read.parquet(s"${features.basename}.results")
         val relevantResults = spark.read.parquet(s"${features.basename}.relevance")
+        val complexFilename = s"${features.basename}.complexresutls"
+        val complexResults = if (new File(complexFilename).exists()) spark.read.parquet(complexFilename)
+          else spark.createDataFrame(Seq())
+
         for (shard <- 0 until properties.shardCount) {
 
           logger.info(s"processing shard $shard")
@@ -49,8 +53,10 @@ object LabelResults extends LazyLogging {
           val labeledResults = shardResults
             .join(baseResults.select($"query", $"gdocid", $"rank" as "base-rank"), Seq("query", "gdocid"), "leftouter")
             .join(relevantResults.select($"query", $"gdocid", $"gdocid" as "relevant-indicator"), Seq("query", "gdocid"), "leftouter")
+            .join(complexResults.select($"query", $"gdocid", $"rank" as "complex-rank"), Seq("query", "gdocid"), "leftouter")
             .withColumn("relevant", when($"relevant-indicator".isNotNull, true).otherwise(false))
             .withColumn("baseorder", when($"base-rank".isNotNull, $"base-rank").otherwise(Int.MaxValue))
+            .withColumn("complexorder", when($"complex-rank".isNotNull, $"complex-rank").otherwise(Int.MaxValue))
 
           val columns = shardResults.columns ++ Array("relevant", "baseorder")
           labeledResults.select(columns.head, columns.drop(1):_*)
