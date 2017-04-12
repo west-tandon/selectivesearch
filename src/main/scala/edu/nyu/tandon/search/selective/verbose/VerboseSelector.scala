@@ -155,9 +155,7 @@ object VerboseSelector extends LazyLogging {
     val impacts = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"$basename#$shard.impacts")
         .select($"query", $"bucket", $"impact")
-        .map {
-          case Row(query: Int, bucket: Int, impact: Double) => (query, bucket, impact)
-        }.collect()
+        .map (row => (row.getAs[Int]("query"), row.getAs[Int]("bucket"), row.getAs[Double]("impact"))).collect()
         .groupBy(_._1)
         .mapValues(_.groupBy(_._2).mapValues(impactList => {
           assert(impactList.length == 1,

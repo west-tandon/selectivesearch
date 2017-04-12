@@ -7,7 +7,7 @@ import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.unfolder
 import org.apache.spark.sql.functions.{sum, when}
-import org.apache.spark.sql.types.FloatType
+import org.apache.spark.sql.types.{DoubleType, FloatType}
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import scopt.OptionParser
 
@@ -53,9 +53,10 @@ object ResolvePayoffs extends LazyLogging {
               Seq("query", "gdocid"),
               "leftouter")
             .withColumn("y", when($"rank-base".isNull or ($"rank-base" >= config.k), 0).otherwise(1))
-            .groupBy($"query", $"shard", $"bucket")
-            .agg(sum("y").cast(FloatType).as("impact"))
-            .orderBy($"query", $"shard", $"bucket")
+            .groupBy($"query", $"bucket")
+            .agg(sum("y").cast(DoubleType).as("impact"))
+            .select($"query", $"bucket", $"impact")
+            .orderBy($"query", $"bucket")
             .coalesce(1)
             .write
             .mode(SaveMode.Overwrite)
