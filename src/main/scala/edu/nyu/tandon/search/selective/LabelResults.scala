@@ -7,6 +7,7 @@ import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.unfolder
 import org.apache.spark.sql.functions.when
+import org.apache.spark.sql.types.{IntegerType, LongType, StructField, StructType}
 import org.apache.spark.sql.{SaveMode, SparkSession}
 import scopt.OptionParser
 
@@ -42,7 +43,7 @@ object LabelResults extends LazyLogging {
         val relevantResults = spark.read.parquet(s"${features.basename}.relevance")
         val complexFilename = s"${features.basename}.complexresutls"
         val complexResults = if (new File(complexFilename).exists()) spark.read.parquet(complexFilename)
-          else spark.createDataFrame(Seq())
+          else Seq.empty[(Int, Long, Int)].toDF("query", "gdocid", "rank")
 
         for (shard <- 0 until properties.shardCount) {
 
