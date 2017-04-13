@@ -53,7 +53,7 @@ object ResolvePayoffs extends LazyLogging {
               Seq("query", "gdocid"),
               "leftouter")
             .withColumn("y", when($"rank-base".isNull or ($"rank-base" >= config.k), 0).otherwise(1))
-            .groupBy($"query", $"bucket")
+            .groupBy($"query", $"shard", $"bucket")
             .agg(sum("y").cast(DoubleType).as("impact"))
             .select($"query", $"shard", $"bucket", $"impact")
             .orderBy($"query", $"bucket")
