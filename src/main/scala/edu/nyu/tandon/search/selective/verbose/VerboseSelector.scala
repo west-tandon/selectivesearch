@@ -1,15 +1,14 @@
 package edu.nyu.tandon.search.selective.verbose
 
-import java.io.{BufferedWriter, FileNotFoundException, FileWriter}
+import java.io.{BufferedWriter, File, FileWriter}
 
 import com.typesafe.scalalogging.LazyLogging
-import edu.nyu.tandon.search.selective.Path
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.verbose.VerboseSelector.scoreOrdering
-import edu.nyu.tandon.utils.Lines._
-import edu.nyu.tandon.utils.TupleIterators._
-import edu.nyu.tandon.utils.{Lines, ZippedIterator}
+import org.apache.spark.sql.functions.when
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{Row, SparkSession}
 import scopt.OptionParser
 
 import scala.annotation.tailrec
@@ -101,43 +100,112 @@ object VerboseSelector extends LazyLogging {
 
   val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
 
-  def selectors(basename: String, shardPenalty: Double): Seq[VerboseSelector] = {
-    val features = Features.get(Properties.get(basename))
-    val base = features.baseResults.toList.map(_.map(_.toInt))
-    val qrels = try {
-      features.qrelsReference
-    } catch {
-      case e: FileNotFoundException => Seq.fill(base.length)(Seq())
+  def selectors(basename: String, shardPenalty: Double): Iterator[VerboseSelector] = {
+    val properties = Properties.get(basename)
+    val features = Features.get(properties)
+    val spark = SparkSession.builder().master("local").getOrCreate()
+    import spark.implicits._
+
+    logger.info("loading data")
+
+    val shardResults = for (shard <- 0 until properties.shardCount) yield {
+      val parquet = spark.read.parquet(s"${features.basename}#$shard.labeledresults-${properties.bucketCount}")
+      val columns = Seq("query", "bucket", "score", "relevant", "baseorder", "complexorder")
+        .intersect(parquet.schema.fieldNames)
+      val relevantExists = columns.contains("relevant")
+      val baseOrderExists = columns.contains("baseorder")
+      val complexOrderExists = columns.contains("complexorder")
+      parquet
+        .select(columns.head, columns.drop(1):_*)
+        .map (row => {
+          val query = row.getInt(0)
+          val bucket = row.getInt(1)
+          val score = row.getDouble(2)
+          val relevant = if (relevantExists) row.getAs[Boolean]("relevant") else false
+          val baseOrder = if (baseOrderExists) row.getAs[Int]("baseorder") else Int.MaxValue
+          val complexOrder = if (complexOrderExists) row.getAs[Int]("complexorder") else Int.MaxValue
+          (query, bucket, score, relevant, baseOrder, complexOrder)
+        }).collect()
+        .groupBy(_._1)
+        .mapValues(_.groupBy(_._2).mapValues(_.map {
+          case (_, _, score, relevant, baseOrder, complexOrder) =>
+            Result(score, relevant, baseOrder, complexOrder)
+        }))
     }
-    val complex = try {
-      features.complexFunctionResults
-    } catch {
-      case e: FileNotFoundException => Seq.fill(base.length)(Seq())
-    }
-    val data = ZippedIterator(for (shard <- 0 until features.shardCount) yield
-      ZippedIterator(for (bucket <- 0 until features.properties.bucketCount) yield {
-        val results = Lines.fromFile(Path.toGlobalResults(basename, shard, bucket)).ofSeq[Long].toIndexedSeq
-        val scores = Lines.fromFile(Path.toScores(basename, shard, bucket)).ofSeq[Double].toIndexedSeq
-        val costs = Lines.fromFile(Path.toCosts(basename, shard, bucket)).of[Double].toIndexedSeq
-        val postingCosts = Lines.fromFile(Path.toPostingCosts(basename, shard, bucket)).of[Long].toIndexedSeq
-        val impacts = Lines.fromFile(Path.toPayoffs(basename, shard, bucket)).of[Double].toIndexedSeq
-        for ((res, bas, qr, score, cost, impact, postingCost, complexResults) <-
-             results.iterator.zip(base.iterator).flatZip(qrels.iterator).flatZip(scores.iterator)
-               .flatZip(costs.iterator).flatZip(impacts.iterator).flatZip(postingCosts.iterator).flatZip(complex.iterator)) yield {
-          Bucket(shard, (for ((r, s) <- res.zip(score)) yield {
-            Result(score = s, relevant = qr.contains(r), originalRank = {
-              val idx = bas.indexOf(r)
-              if (idx < 0) Int.MaxValue
-              else idx
-            }, complexRank = {
-              val idx = complexResults.indexOf(r)
-              if (idx < 0) Int.MaxValue
-              else idx
-            })
-          }).toList, impact, cost, postingCost, penalty = if (bucket == 0) shardPenalty else 0.0)
-        }
-      }).map(l => new Shard(shard, l.toList)))
-    data.map(new VerboseSelector(_)).toIndexedSeq
+
+    //val costs =
+    //  if (new File(s"basename#0.cost").exists())
+    //    Some(for (shard <- 0 until properties.shardCount) yield
+    //      spark.read.parquet(s"$basename#$shard.cost"))
+    //  else None
+
+    val postingCosts = for (shard <- 0 until properties.shardCount) yield
+      spark.read.parquet(s"${features.basename}#$shard.postingcost-${properties.bucketCount}")
+        .select($"query", $"bucket", $"postingcost")
+        .map {
+          case Row(query: Int, bucket: Int, postingCost: Long) => (query, bucket, postingCost)
+        }.collect()
+        .groupBy(_._1)
+        .mapValues(_.groupBy(_._2).mapValues(postingCostList => {
+          assert(postingCostList.length == 1,
+            s"there must be exactly 1 postingCost value for (query, shard, bucket) but ${postingCostList.length} found")
+          postingCostList.head._3
+        }))
+
+    val impacts = for (shard <- 0 until properties.shardCount) yield
+      spark.read.parquet(s"$basename#$shard.impacts")
+        .select($"query", $"bucket", $"impact")
+        .map (row => (row.getAs[Int]("query"), row.getAs[Int]("bucket"), row.getAs[Double]("impact"))).collect()
+        .groupBy(_._1)
+        .mapValues(_.groupBy(_._2).mapValues(impactList => {
+          assert(impactList.length == 1,
+            s"there must be exactly 1 impact value for (query, shard, bucket) but ${impactList.length} found")
+          impactList.head._3
+        }))
+
+    val queryFeatures = spark.read.parquet(s"${features.basename}.queryfeatures")
+
+    logger.info("data loaded")
+
+    queryFeatures.select("query")
+      .orderBy("query")
+      .collect()
+      .toIterator
+      .map {
+        case Row(queryId: Int) =>
+
+          logger.info(s"creating selector $queryId")
+
+          val queryCondition = s"query = $queryId"
+
+          val shards = for (shard <- 0 until properties.shardCount) yield {
+            val qResults = shardResults(shard).get(queryId)
+            val qImpacts = impacts(shard).get(queryId)
+            val qPostingCosts = postingCosts(shard)(queryId)
+            val buckets = for (bucket <- 0 until properties.bucketCount) yield {
+              Bucket(shard,
+                qResults match {
+                  case Some(someResults) => someResults.get(bucket) match {
+                    case Some(results) => results
+                    case None => Seq()
+                  }
+                  case None => Seq()
+                },
+                qImpacts match {
+                  case Some(someImpacts) => someImpacts.get(bucket) match {
+                    case Some(impact) => impact
+                    case None => 0.0
+                  }
+                  case None => 0.0
+                },
+                cost = 1.0 / properties.bucketCount,
+                qPostingCosts(bucket))
+            }
+            Shard(shard, buckets.toList)
+          }
+
+          new VerboseSelector(shards)
+      }
   }
 
   def printHeader(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int])(writer: BufferedWriter): Unit = {
@@ -251,7 +319,7 @@ object VerboseSelector extends LazyLogging {
 
         for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
           logger.info(s"processing query $idx")
-          logger.debug(s"total number of retrieved relevant documents: ${selector.shards.flatMap(_.buckets).flatMap(_.results).count(_.relevant)}")
+          //logger.debug(s"total number of retrieved relevant documents: ${selector.shards.flatMap(_.buckets).flatMap(_.results).count(_.relevant)}")
           processSelector(config.precisions, config.overlaps, config.complexRecalls, config.maxShards)(idx, selector, writer)
         }
 

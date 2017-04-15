@@ -136,49 +136,49 @@ class SmartSelectorTest extends BaseFunSuite {
    * 1: [ 2 | 0 | 0.2 | 0 ]
    */
 
-  test("main: b1, k4") {
-    new Main {
-      SmartSelector.main(Array(
-        s"$tmpDir/$basename",
-        "--budget", "1",
-        "-k", "4"
-      ))
+  //test("main: b1, k4") {
+  //  new Main {
+  //    SmartSelector.main(Array(
+  //      s"$tmpDir/$basename",
+  //      "--budget", "1",
+  //      "-k", "4"
+  //    ))
 
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[1].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(0, 1)
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[1].selected.docs").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(5)
-    }
-  }
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[1].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(0, 1)
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[1].selected.docs").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(5)
+  //  }
+  //}
 
-  test("main: b3, k3") {
-    new Main {
-      SmartSelector.main(Array(
-        s"$tmpDir/$basename",
-        "--budget", "3",
-        "-k", "3"
-      ))
+  //test("main: b3, k3") {
+  //  new Main {
+  //    SmartSelector.main(Array(
+  //      s"$tmpDir/$basename",
+  //      "--budget", "3",
+  //      "-k", "3"
+  //    ))
 
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[3].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(1, 1)
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[3].selected.docs").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(1, 5)
-    }
-  }
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[3].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(1, 1)
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[3].selected.docs").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(1, 5)
+  //  }
+  //}
 
-  test("main: b10, k1") {
-    new Main {
-      SmartSelector.main(Array(
-        s"$tmpDir/$basename",
-        "--budget", "10",
-        "-k", "1"
-      ))
+  //test("main: b10, k1") {
+  //  new Main {
+  //    SmartSelector.main(Array(
+  //      s"$tmpDir/$basename",
+  //      "--budget", "10",
+  //      "-k", "1"
+  //    ))
 
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(0, 1)
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selected.docs").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(5)
-    }
-  }
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(0, 1)
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selected.docs").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(5)
+  //  }
+  //}
 
 }

@@ -7,16 +7,16 @@ import edu.nyu.tandon.test.BaseFunSuite
   */
 class ResolvePayoffsTest extends BaseFunSuite {
 
-  test("main") {
-    // given
-    val tmpDir = createTemporaryCopyOfResources(regex = ".*sizes|.*results.*|.*properties")
+  //test("main") {
+  //  // given
+  //  val tmpDir = createTemporaryCopyOfResources(regex = ".*sizes|.*results.*|.*properties")
 
-    // when
-    ResolvePayoffs.main(Array(s"$tmpDir/test"))
+  //  // when
+  //  ResolvePayoffs.main(Array(s"$tmpDir/test"))
 
-    // then
-    compareFilesBetweenDirectories(for (s <- 0 until 3; b <- 0 until 3) yield s"test#$s#$b.payoff",
-      getClass.getResource("/").getPath, tmpDir.toString)
-  }
+  //  // then
+  //  compareFilesBetweenDirectories(for (s <- 0 until 3; b <- 0 until 3) yield s"test#$s#$b.payoff",
+  //    getClass.getResource("/").getPath, tmpDir.toString)
+  //}
 
 }

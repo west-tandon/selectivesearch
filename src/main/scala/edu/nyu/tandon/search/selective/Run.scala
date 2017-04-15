@@ -33,7 +33,9 @@ object Run {
     (TPaired.CommandName, TPaired.main),
     (Precision.CommandName, Precision.main),
     (VerboseSelector.CommandName, VerboseSelector.main),
-    (Status.CommandName, Status.main)
+    (Status.CommandName, Status.main),
+    (QRels2Parquet.CommandName, QRels2Parquet.main),
+    (LabelResults.CommandName, LabelResults.main)
   )
 
   def printUsage(): Unit = {

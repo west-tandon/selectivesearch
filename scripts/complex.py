@@ -2,6 +2,7 @@ import argparse
 import sys
 import pandas as pd
 import numpy as np
+from fastparquet import write
 
 parser = argparse.ArgumentParser(description='Convert a complex-ranking-function result file to a format supported by selectivesearch', prog='complex')
 parser.add_argument('input', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
@@ -27,14 +28,9 @@ def m(id):
         return map[id]
 
 data = pd.read_csv(args.input, sep=' ')
-data.columns = ['qid', 'did', 'score', 'cscore']
+data.columns = ['query', 'gdocid', 'score', 'cscore']
+data['ldocid'] = data['gdocid']
+data = data.sort_values(by=['query', 'cscore'], ascending=[True, False])
+data['rank'] = data.groupby('query').cumcount()
 
-with open('{}.results.global'.format(args.output), 'w') as results:
-    with open('{}.scores'.format(args.output), 'w') as scores:
-        for qid, group in data.groupby('qid'):
-            sorted = [(int(row[0]), row[1]) for row in group.sort_values(by='cscore', ascending=False)[['did', 'cscore']].values]
-            # print(sorted)
-            results.write(' '.join([str(m(did)) for did, s in sorted]))
-            results.write('\n')
-            scores.write(' '.join([str(s) for did, s in sorted]))
-            scores.write('\n')
+write('{}.complexresults'.format(args.output), data, compression='SNAPPY', write_index=False)

@@ -1,8 +1,12 @@
 package edu.nyu
 
+import java.io.File
+
 import edu.nyu.tandon.search.selective._
 import edu.nyu.tandon.utils.ReadLineIterator
 import org.antlr.v4.runtime.atn.SemanticContext.Predicate
+import org.apache.commons.io.FileUtils
+import org.apache.commons.lang3.RandomStringUtils
 
 import scala.collection.mutable.ListBuffer
 
@@ -23,6 +27,21 @@ package object tandon {
       b.toList
     }
     else Nil
+  }
+
+  def unfolder(file: File) = {
+    assert(file.exists(), "the file doesn't exist")
+    val dir = file.getParentFile
+    val temp = new File(file.getAbsolutePath
+      .concat("-").concat(RandomStringUtils.randomAlphabetic(8)))
+    FileUtils.moveDirectory(file, temp)
+
+    val parquetFiles = temp.listFiles().filter(_.getName.endsWith("parquet"))
+    assert(parquetFiles.length == 1, "detected more than one parquet file in the folder")
+
+    val parquet = parquetFiles(0)
+    FileUtils.moveFile(parquet, file)
+    FileUtils.deleteDirectory(temp)
   }
 
 }
