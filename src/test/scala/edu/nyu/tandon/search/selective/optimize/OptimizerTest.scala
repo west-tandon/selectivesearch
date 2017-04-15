@@ -366,131 +366,131 @@ class OptimizerTest extends BaseFunSuite {
     Titles2Map.titles2map(Properties.get(s"$tmpDir/$basename").features)
   }
 
-  test("PrecisionOptimizer.main: overlap, b=10") {
-    new ShardsOnDisk {
-      PrecisionOptimizer.main(Array(
-        "overlap",
-        s"$tmpDir/$basename",
-        "--budget", "10",
-        "-k", "4"
-      ))
-      val selection = Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
-      selection.next() should contain theSameElementsInOrderAs List(4, 0)
-      selection.next() should contain theSameElementsInOrderAs List(4, 0)
-      val selected = Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selected.docs").ofSeq[Int]
-      selected.next() should contain theSameElementsInOrderAs List(4, 3, 2, 1)
-      selected.next() should contain theSameElementsInOrderAs List(4, 3, 2, 1)
-    }
-  }
+  //test("PrecisionOptimizer.main: overlap, b=10") {
+  //  new ShardsOnDisk {
+  //    PrecisionOptimizer.main(Array(
+  //      "overlap",
+  //      s"$tmpDir/$basename",
+  //      "--budget", "10",
+  //      "-k", "4"
+  //    ))
+  //    val selection = Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
+  //    selection.next() should contain theSameElementsInOrderAs List(4, 0)
+  //    selection.next() should contain theSameElementsInOrderAs List(4, 0)
+  //    val selected = Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selected.docs").ofSeq[Int]
+  //    selected.next() should contain theSameElementsInOrderAs List(4, 3, 2, 1)
+  //    selected.next() should contain theSameElementsInOrderAs List(4, 3, 2, 1)
+  //  }
+  //}
 
-  test("PrecisionOptimizer.main: overlap, b=2.001") {
-    new ShardsOnDisk {
-      PrecisionOptimizer.main(Array(
-        "overlap",
-        s"$tmpDir/$basename",
-        "--budget", "2.001",
-        "-k", "4"
-      ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.001].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(1, 1)
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.001].selected.docs").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(1, 5)
-    }
-  }
+  //test("PrecisionOptimizer.main: overlap, b=2.001") {
+  //  new ShardsOnDisk {
+  //    PrecisionOptimizer.main(Array(
+  //      "overlap",
+  //      s"$tmpDir/$basename",
+  //      "--budget", "2.001",
+  //      "-k", "4"
+  //    ))
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.001].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(1, 1)
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.001].selected.docs").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(1, 5)
+  //  }
+  //}
 
-  test("PrecisionOptimizer.main: overlap, b=2.002") {
-    new ShardsOnDisk {
-      PrecisionOptimizer.main(Array(
-        "overlap",
-        s"$tmpDir/$basename",
-        "--budget", "2.002",
-        "-k", "4"
-      ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.002].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(4, 0)
-    }
-  }
+  //test("PrecisionOptimizer.main: overlap, b=2.002") {
+  //  new ShardsOnDisk {
+  //    PrecisionOptimizer.main(Array(
+  //      "overlap",
+  //      s"$tmpDir/$basename",
+  //      "--budget", "2.002",
+  //      "-k", "4"
+  //    ))
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.002].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(4, 0)
+  //  }
+  //}
 
-  test("PrecisionOptimizer.main: relevance, b=10") {
-    new ShardsWithMap {
-      PrecisionOptimizer.main(Array(
-        "relevance",
-        s"$tmpDir/$basename",
-        "--budget", "10",
-        "-k", "4"
-      ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(4, 0)
-    }
-  }
+  //test("PrecisionOptimizer.main: relevance, b=10") {
+  //  new ShardsWithMap {
+  //    PrecisionOptimizer.main(Array(
+  //      "relevance",
+  //      s"$tmpDir/$basename",
+  //      "--budget", "10",
+  //      "-k", "4"
+  //    ))
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(4, 0)
+  //  }
+  //}
 
-  test("PrecisionOptimizer.main: relevance, b=2.001") {
-    new ShardsWithMap {
-      PrecisionOptimizer.main(Array(
-        "relevance",
-        s"$tmpDir/$basename",
-        "--budget", "2.001",
-        "-k", "4"
-      ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.001].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(1, 1)
-    }
-  }
+  //test("PrecisionOptimizer.main: relevance, b=2.001") {
+  //  new ShardsWithMap {
+  //    PrecisionOptimizer.main(Array(
+  //      "relevance",
+  //      s"$tmpDir/$basename",
+  //      "--budget", "2.001",
+  //      "-k", "4"
+  //    ))
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.001].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(1, 1)
+  //  }
+  //}
 
-  test("PrecisionOptimizer.main: relevance, b=2.002") {
-    new ShardsWithMap {
-      PrecisionOptimizer.main(Array(
-        "relevance",
-        s"$tmpDir/$basename",
-        "--budget", "2.002",
-        "-k", "4"
-      ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.002].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(4, 0)
-    }
-  }
+  //test("PrecisionOptimizer.main: relevance, b=2.002") {
+  //  new ShardsWithMap {
+  //    PrecisionOptimizer.main(Array(
+  //      "relevance",
+  //      s"$tmpDir/$basename",
+  //      "--budget", "2.002",
+  //      "-k", "4"
+  //    ))
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[2.002].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(4, 0)
+  //  }
+  //}
 
-  test("PrecisionOptimizer.main: relevance, no map") {
-    new ShardsOnDisk {
-      PrecisionOptimizer.main(Array(
-        "relevance",
-        s"$tmpDir/$basename",
-        "--budget", "10",
-        "-k", "4"
-      ))
-      Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(4, 0)
-    }
-  }
+  //test("PrecisionOptimizer.main: relevance, no map") {
+  //  new ShardsOnDisk {
+  //    PrecisionOptimizer.main(Array(
+  //      "relevance",
+  //      s"$tmpDir/$basename",
+  //      "--budget", "10",
+  //      "-k", "4"
+  //    ))
+  //    Lines.fromFile(s"$tmpDir/$basename$BudgetIndicator[10].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(4, 0)
+  //  }
+  //}
 
-  test("BudgetOptimizer.main: overlap, t=1") {
-    new ShardsOnDisk {
-      BudgetOptimizer.main(Array(
-        "overlap",
-        s"$tmpDir/$basename",
-        "--precision", "1",
-        "-k", "4"
-      ))
-      Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[1].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(4, 4)
-      Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[1].selected.docs").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(4, 8, 3, 7, 2, 6, 1, 5)
-    }
-  }
+  //test("BudgetOptimizer.main: overlap, t=1") {
+  //  new ShardsOnDisk {
+  //    BudgetOptimizer.main(Array(
+  //      "overlap",
+  //      s"$tmpDir/$basename",
+  //      "--precision", "1",
+  //      "-k", "4"
+  //    ))
+  //    Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[1].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(4, 4)
+  //    Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[1].selected.docs").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(4, 8, 3, 7, 2, 6, 1, 5)
+  //  }
+  //}
 
-  test("BudgetOptimizer.main: overlap, t=0.5") {
-    new ShardsOnDisk {
-      BudgetOptimizer.main(Array(
-        "overlap",
-        s"$tmpDir/$basename",
-        "--precision", "0.5",
-        "-k", "4"
-      ))
-      Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[0.5].selection").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(1, 1)
-      Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[0.5].selected.docs").ofSeq[Int]
-        .next() should contain theSameElementsInOrderAs List(1, 5)
-    }
-  }
+  //test("BudgetOptimizer.main: overlap, t=0.5") {
+  //  new ShardsOnDisk {
+  //    BudgetOptimizer.main(Array(
+  //      "overlap",
+  //      s"$tmpDir/$basename",
+  //      "--precision", "0.5",
+  //      "-k", "4"
+  //    ))
+  //    Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[0.5].selection").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(1, 1)
+  //    Lines.fromFile(s"$tmpDir/$basename$ThresholdIndicator[0.5].selected.docs").ofSeq[Int]
+  //      .next() should contain theSameElementsInOrderAs List(1, 5)
+  //  }
+  //}
 
 }
