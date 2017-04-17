@@ -100,7 +100,7 @@ object VerboseSelector extends LazyLogging {
 
   val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
 
-  def selectors(basename: String, shardPenalty: Double): Iterator[VerboseSelector] = {
+  def selectors(basename: String, shardPenalty: Double, from: Int, to: Int): Iterator[VerboseSelector] = {
     val properties = Properties.get(basename)
     val features = Features.get(properties)
     val spark = SparkSession.builder().master("local").getOrCreate()
@@ -117,6 +117,7 @@ object VerboseSelector extends LazyLogging {
       val complexOrderExists = columns.contains("complexorder")
       parquet
         .select(columns.head, columns.drop(1):_*)
+        .filter($"query" >= from and $"query" < to)
         .map (row => {
           val query = row.getInt(0)
           val bucket = row.getInt(1)
@@ -142,6 +143,7 @@ object VerboseSelector extends LazyLogging {
     val postingCosts = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"${features.basename}#$shard.postingcost-${properties.bucketCount}")
         .select($"query", $"bucket", $"postingcost")
+        .filter($"query" >= from and $"query" < to)
         .map {
           case Row(query: Int, bucket: Int, postingCost: Long) => (query, bucket, postingCost)
         }.collect()
@@ -155,6 +157,7 @@ object VerboseSelector extends LazyLogging {
     val impacts = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"$basename#$shard.impacts")
         .select($"query", $"bucket", $"impact")
+        .filter($"query" >= from and $"query" < to)
         .map (row => (row.getAs[Int]("query"), row.getAs[Int]("bucket"), row.getAs[Double]("impact"))).collect()
         .groupBy(_._1)
         .mapValues(_.groupBy(_._2).mapValues(impactList => {
@@ -164,6 +167,7 @@ object VerboseSelector extends LazyLogging {
         }))
 
     val queryFeatures = spark.read.parquet(s"${features.basename}.queryfeatures")
+      .filter($"query" >= from and $"query" < to)
 
     logger.info("data loaded")
 
@@ -276,7 +280,8 @@ object VerboseSelector extends LazyLogging {
                       overlaps: Seq[Int] = Seq(10, 30),
                       complexRecalls: Seq[Int] = Seq(10, 30),
                       maxShards: Int = Int.MaxValue,
-                      shardPenalty: Double = 0.0)
+                      shardPenalty: Double = 0.0,
+                      batchSize: Int = 50)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -305,22 +310,40 @@ object VerboseSelector extends LazyLogging {
         .action((x, c) => c.copy(maxShards = x))
         .text("maximum number of shards to select")
 
+      opt[Int]('b', "batch-size")
+        .action((x, c) => c.copy(batchSize = x))
+        .text("how many queries to run at once in memory")
+
     }
 
     parser.parse(args, Config()) match {
       case Some(config) =>
 
-        logger.info("creating selectors")
-        val selectorsForQueries = selectors(config.basename, config.shardPenalty)
+        assert(config.batchSize > 0)
+
+        val features = Features.get(Properties.get(config.basename))
+        val queries = SparkSession.builder().master("local").getOrCreate()
+          .read.parquet(s"${features.basename}.queryfeatures")
+          .select("query")
+          .orderBy("query")
+          .collect()
+          .map(_.getInt(0))
+          .grouped(config.batchSize)
+          .map(a => (a.head, a.last + 1))
 
         val writer = new BufferedWriter(new FileWriter(s"${config.basename}.verbose"))
 
-        printHeader(config.precisions, config.overlaps, config.complexRecalls)(writer)
+        for ((from, to) <- queries) {
 
-        for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
-          logger.info(s"processing query $idx")
-          //logger.debug(s"total number of retrieved relevant documents: ${selector.shards.flatMap(_.buckets).flatMap(_.results).count(_.relevant)}")
-          processSelector(config.precisions, config.overlaps, config.complexRecalls, config.maxShards)(idx, selector, writer)
+          logger.info("creating selectors")
+          val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to)
+
+          printHeader(config.precisions, config.overlaps, config.complexRecalls)(writer)
+
+          for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
+            logger.info(s"processing query $idx")
+            processSelector(config.precisions, config.overlaps, config.complexRecalls, config.maxShards)(idx, selector, writer)
+          }
         }
 
         writer.close()
