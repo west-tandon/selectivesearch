@@ -40,7 +40,11 @@ object LabelResults extends LazyLogging {
         import spark.implicits._
 
         val baseResults = spark.read.parquet(s"${features.basename}.results")
-        val relevantResults = spark.read.parquet(s"${features.basename}.relevance")
+
+        val relevanceFilename = s"${features.basename}.relevance"
+        val relevantResults = if (new File(relevanceFilename).exists()) spark.read.parquet(relevanceFilename)
+          else Seq.empty[(Int, Long)].toDF("query", "gdocid")
+
         val complexFilename = s"${features.basename}.complexresutls"
         val complexResults = if (new File(complexFilename).exists()) spark.read.parquet(complexFilename)
           else Seq.empty[(Int, Long, Int)].toDF("query", "gdocid", "rank")
