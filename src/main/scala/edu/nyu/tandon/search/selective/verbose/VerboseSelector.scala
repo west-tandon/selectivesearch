@@ -281,7 +281,7 @@ object VerboseSelector extends LazyLogging {
                       complexRecalls: Seq[Int] = Seq(10, 30),
                       maxShards: Int = Int.MaxValue,
                       shardPenalty: Double = 0.0,
-                      batchSize: Int = 50)
+                      batchSize: Int = 200)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -332,16 +332,15 @@ object VerboseSelector extends LazyLogging {
           .map(a => (a.head, a.last + 1))
 
         val writer = new BufferedWriter(new FileWriter(s"${config.basename}.verbose"))
+        printHeader(config.precisions, config.overlaps, config.complexRecalls)(writer)
 
         for ((from, to) <- queries) {
 
           logger.info("creating selectors")
           val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to)
 
-          printHeader(config.precisions, config.overlaps, config.complexRecalls)(writer)
-
           for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
-            logger.info(s"processing query $idx")
+            logger.info(s"processing query ${idx + from}")
             processSelector(config.precisions, config.overlaps, config.complexRecalls, config.maxShards)(idx, selector, writer)
           }
         }
