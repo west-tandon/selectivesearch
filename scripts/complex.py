@@ -33,6 +33,6 @@ data['gdocid'] = data['gdocid'].map(lambda docid: map[docid])
 data['ldocid'] = data['gdocid']
 data = data.sort_values(by=['query', 'cscore'], ascending=[True, False])
 data['rank'] = data.groupby('query').cumcount()
-data['query'] = data['query'].rank(method='dense')
+data['query'] = data['query'].rank(method='dense').subtract(1)
 
 write('{}.complexresults'.format(args.output), data, compression='SNAPPY', write_index=False)
