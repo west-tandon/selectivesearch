@@ -29,6 +29,7 @@ def m(id):
 
 data = pd.read_csv(args.input, sep=' ')
 data.columns = ['query', 'gdocid', 'score', 'cscore']
+data['gdocid'] = data['gdocid'].map(lambda docid: map[docid])
 data['ldocid'] = data['gdocid']
 data = data.sort_values(by=['query', 'cscore'], ascending=[True, False])
 data['rank'] = data.groupby('query').cumcount()

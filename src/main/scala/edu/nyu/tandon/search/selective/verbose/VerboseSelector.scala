@@ -240,7 +240,7 @@ object VerboseSelector extends LazyLogging {
     @tailrec
     def process(selector: VerboseSelector, step: Int = 1): Unit = {
 
-      logger.info(s"Selected [shard=${selector.lastSelectedShard}, bucket=${selector.lastSelectedBucket}, cost=${selector.lastSelectedCost}]")
+      //logger.info(s"Selected [shard=${selector.lastSelectedShard}, bucket=${selector.lastSelectedBucket}, cost=${selector.lastSelectedCost}]")
 
       writer.write(Seq(
         qid,
@@ -336,7 +336,7 @@ object VerboseSelector extends LazyLogging {
 
         for ((from, to) <- queries) {
 
-          logger.info("creating selectors")
+          logger.info(s"processing batch [$from, $to]")
           val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to)
 
           for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
