@@ -43,11 +43,17 @@ object LabelResults extends LazyLogging {
 
         val relevanceFilename = s"${features.basename}.relevance"
         val relevantResults = if (new File(relevanceFilename).exists()) spark.read.parquet(relevanceFilename)
-          else Seq.empty[(Int, Long)].toDF("query", "gdocid")
+          else {
+            logger.warn("no relevant documents found")
+            Seq.empty[(Int, Long)].toDF("query", "gdocid")
+          }
 
         val complexFilename = s"${features.basename}.complexresutls"
         val complexResults = if (new File(complexFilename).exists()) spark.read.parquet(complexFilename)
-          else Seq.empty[(Int, Long, Int)].toDF("query", "gdocid", "rank")
+          else {
+            logger.warn("no complex results found")
+            Seq.empty[(Int, Long, Int)].toDF("query", "gdocid", "rank")
+          }
 
         for (shard <- 0 until properties.shardCount) {
 
