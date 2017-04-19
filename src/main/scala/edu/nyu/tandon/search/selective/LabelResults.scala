@@ -48,7 +48,7 @@ object LabelResults extends LazyLogging {
             Seq.empty[(Int, Long)].toDF("query", "gdocid")
           }
 
-        val complexFilename = s"${features.basename}.complexresutls"
+        val complexFilename = s"${features.basename}.complexresults"
         val complexResults = if (new File(complexFilename).exists()) spark.read.parquet(complexFilename)
           else {
             logger.warn(s"no complex results found: $complexFilename")
