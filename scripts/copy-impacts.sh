@@ -15,5 +15,6 @@ do
     pdsql \
         ${input} \
         -q "select query, shard, 0 as bucket, ${column} as impact from df0 where shard=${shard}" \
-        -o "${output}#${shard}.impacts"
+        -o "${output}#${shard}.impacts" \
+        -d query=int32 shard=int32 bucket=int32
 done
