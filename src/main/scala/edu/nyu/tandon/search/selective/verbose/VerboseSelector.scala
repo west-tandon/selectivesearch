@@ -1,13 +1,11 @@
 package edu.nyu.tandon.search.selective.verbose
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{BufferedWriter, FileWriter}
 
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
 import edu.nyu.tandon.search.selective.verbose.VerboseSelector.scoreOrdering
-import org.apache.spark.sql.functions.when
-import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Row, SparkSession}
 import scopt.OptionParser
 
@@ -100,7 +98,7 @@ object VerboseSelector extends LazyLogging {
 
   val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
 
-  def selectors(basename: String, shardPenalty: Double, from: Int, to: Int): Iterator[VerboseSelector] = {
+  def selectors(basename: String, shardPenalty: Double, from: Int, to: Int, usePostingCosts: Boolean): Iterator[VerboseSelector] = {
     val properties = Properties.get(basename)
     val features = Features.get(properties)
     val spark = SparkSession.builder().master("local").getOrCreate()
@@ -133,12 +131,6 @@ object VerboseSelector extends LazyLogging {
             Result(score, relevant, baseOrder, complexOrder)
         }))
     }
-
-    //val costs =
-    //  if (new File(s"basename#0.cost").exists())
-    //    Some(for (shard <- 0 until properties.shardCount) yield
-    //      spark.read.parquet(s"$basename#$shard.cost"))
-    //  else None
 
     val postingCosts = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"${features.basename}#$shard.postingcost-${properties.bucketCount}")
@@ -202,8 +194,10 @@ object VerboseSelector extends LazyLogging {
                   }
                   case None => 0.0
                 },
-                cost = 1.0 / properties.bucketCount,
-                qPostingCosts(bucket))
+                cost =
+                  if (usePostingCosts) qPostingCosts(bucket)
+                  else 1.0 / properties.bucketCount,
+                postings = qPostingCosts(bucket))
             }
             Shard(shard, buckets.toList)
           }
@@ -281,7 +275,8 @@ object VerboseSelector extends LazyLogging {
                       complexRecalls: Seq[Int] = Seq(10, 30),
                       maxShards: Int = Int.MaxValue,
                       shardPenalty: Double = 0.0,
-                      batchSize: Int = 200)
+                      batchSize: Int = 200,
+                      usePostingCosts: Boolean = false)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -314,6 +309,10 @@ object VerboseSelector extends LazyLogging {
         .action((x, c) => c.copy(batchSize = x))
         .text("how many queries to run at once in memory")
 
+      opt[Boolean]('u', "use-posting-costs")
+        .action((x, c) => c.copy(usePostingCosts = x))
+        .text("use posting costs instead of fixed uniform costs")
+
     }
 
     parser.parse(args, Config()) match {
@@ -337,7 +336,7 @@ object VerboseSelector extends LazyLogging {
         for ((from, to) <- queries) {
 
           logger.info(s"processing batch [$from, $to]")
-          val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to)
+          val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to, config.usePostingCosts)
 
           for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
             logger.info(s"processing query ${idx + from}")
