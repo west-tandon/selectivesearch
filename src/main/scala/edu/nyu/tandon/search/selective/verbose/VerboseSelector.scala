@@ -98,7 +98,7 @@ object VerboseSelector extends LazyLogging {
 
   val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
 
-  def selectors(basename: String, shardPenalty: Double, from: Int, to: Int, usePostingCosts: Boolean): Iterator[VerboseSelector] = {
+  def selectors(basename: String, shardPenalty: Double, from: Int, to: Int, usePostingCosts: Boolean, maxTop: Int): Iterator[VerboseSelector] = {
     val properties = Properties.get(basename)
     val features = Features.get(properties)
     val spark = SparkSession.builder().master("local").getOrCreate()
@@ -202,7 +202,7 @@ object VerboseSelector extends LazyLogging {
             Shard(shard, buckets.toList)
           }
 
-          new VerboseSelector(shards)
+          new VerboseSelector(shards, maxTop = maxTop)
       }
   }
 
@@ -276,7 +276,8 @@ object VerboseSelector extends LazyLogging {
                       maxShards: Int = Int.MaxValue,
                       shardPenalty: Double = 0.0,
                       batchSize: Int = 200,
-                      usePostingCosts: Boolean = false)
+                      usePostingCosts: Boolean = false,
+                      maxTop: Int = 500)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -309,6 +310,10 @@ object VerboseSelector extends LazyLogging {
         .action((x, c) => c.copy(batchSize = x))
         .text("how many queries to run at once in memory")
 
+      opt[Int]('R', "complex-recall-coef")
+        .action((x, c) => c.copy(maxTop = x))
+        .text("how many results to take into account when calculating CR (default 500)")
+
       opt[Boolean]('u', "use-posting-costs")
         .action((x, c) => c.copy(usePostingCosts = x))
         .text("use posting costs instead of fixed uniform costs")
@@ -336,7 +341,7 @@ object VerboseSelector extends LazyLogging {
         for ((from, to) <- queries) {
 
           logger.info(s"processing batch [$from, $to]")
-          val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to, config.usePostingCosts)
+          val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to, config.usePostingCosts, config.maxTop)
 
           for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
             logger.info(s"processing query ${idx + from}")
