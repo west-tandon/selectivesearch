@@ -70,9 +70,9 @@ class VerboseSelector(val shards: Seq[Shard],
   def round(x: Double): Double = BigDecimal(x).setScale(scale, BigDecimal.RoundingMode.HALF_UP).toDouble
 
   def precisionAt(k: Int): Double = round(top.clone().dequeueAll.take(k).count(_.relevant).toDouble / k)
-  def overlapAt(k: Int): Double = round(top.clone().dequeueAll.take(k).count(_.originalRank <= k).toDouble / k)
-  def complexRecall(k: Int): Double = round(top.clone().dequeueAll.count(_.complexRank <= k).toDouble / k)
-  def complexPrecisionAt(k: Int): Double = round(top.clone().dequeueAll.count(_.complexRank <= k).toDouble / k)
+  def overlapAt(k: Int): Double = round(top.clone().dequeueAll.take(k).count(_.originalRank < k).toDouble / k)
+  def complexRecall(k: Int): Double = round(top.clone().dequeueAll.count(_.complexRank < k).toDouble / k)
+  def complexPrecisionAt(k: Int): Double = round(top.clone().dequeueAll.sortBy(_.complexRank).take(k).count(_.relevant).toDouble / k)
 
   def numRelevantInLastSelected(): Int = {
     assert(lastSelectedShard >= 0 && lastSelectedShard < shards.length, "no last selection to report")
