@@ -20,7 +20,6 @@ class VerboseSelector(val shards: Seq[Shard],
                       val lastSelectedShard: Int = -1,
                       val cost: Double = 0,
                       val postings: Long = 0,
-                      maxTop: Int = 500,
                       scale: Int = 4) {
 
   def topShards(n: Int): VerboseSelector = {
@@ -34,7 +33,6 @@ class VerboseSelector(val shards: Seq[Shard],
       lastSelectedShard,
       cost,
       postings,
-      maxTop,
       scale
     )
   }
@@ -50,7 +48,6 @@ class VerboseSelector(val shards: Seq[Shard],
 
       /* update queue */
       top.enqueue(selected.results: _*)
-      top.enqueue(top.dequeueAll.take(maxTop): _*)
 
       val selectedShardId = selected.shardId
       Some(
@@ -99,7 +96,7 @@ object VerboseSelector extends LazyLogging {
 
   val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
 
-  def selectors(basename: String, shardPenalty: Double, from: Int, to: Int, usePostingCosts: Boolean, maxTop: Int): Iterator[VerboseSelector] = {
+  def selectors(basename: String, shardPenalty: Double, from: Int, to: Int, usePostingCosts: Boolean): Iterator[VerboseSelector] = {
     val properties = Properties.get(basename)
     val features = Features.get(properties)
     val spark = SparkSession.builder().master("local").getOrCreate()
@@ -203,7 +200,7 @@ object VerboseSelector extends LazyLogging {
             Shard(shard, buckets.toList)
           }
 
-          new VerboseSelector(shards, maxTop = maxTop)
+          new VerboseSelector(shards)
       }
   }
 
@@ -280,8 +277,7 @@ object VerboseSelector extends LazyLogging {
                       maxShards: Int = Int.MaxValue,
                       shardPenalty: Double = 0.0,
                       batchSize: Int = 200,
-                      usePostingCosts: Boolean = false,
-                      maxTop: Int = 500)
+                      usePostingCosts: Boolean = false)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -318,10 +314,6 @@ object VerboseSelector extends LazyLogging {
         .action((x, c) => c.copy(batchSize = x))
         .text("how many queries to run at once in memory")
 
-      opt[Int]('R', "complex-recall-coef")
-        .action((x, c) => c.copy(maxTop = x))
-        .text("how many results to take into account when calculating CR (default 500)")
-
       opt[Boolean]('u', "use-posting-costs")
         .action((x, c) => c.copy(usePostingCosts = x))
         .text("use posting costs instead of fixed uniform costs")
@@ -349,7 +341,7 @@ object VerboseSelector extends LazyLogging {
         for ((from, to) <- queries) {
 
           logger.info(s"processing batch [$from, $to]")
-          val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to, config.usePostingCosts, config.maxTop)
+          val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to, config.usePostingCosts)
 
           for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
             logger.info(s"processing query ${idx + from}")
