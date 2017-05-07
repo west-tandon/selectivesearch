@@ -48,7 +48,7 @@ class VerboseSelector(val shards: Seq[Shard],
 
       /* update queue */
       top.enqueue(selected.results: _*)
-      top.enqueue(top.dequeueAll.take(5000): _*)
+      top.enqueue(top.dequeueAll.take(2000): _*)
 
       val selectedShardId = selected.shardId
       Some(
