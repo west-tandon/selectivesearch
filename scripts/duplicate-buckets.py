@@ -8,6 +8,7 @@ parser.add_argument('input_prefix')
 parser.add_argument('output_prefix')
 parser.add_argument('shards', type=int)
 parser.add_argument('buckets', type=int)
+parser.add_argument('--decay-factor', '-f', type=int, default=1.0)
 args = parser.parse_args()
 
 
@@ -17,4 +18,5 @@ for shard in range(args.shards):
     for bucket, df in enumerate(output_dfs):
         df['bucket'] = bucket
         df['bucket'] = df['bucket'].astype(np.int32)
+        df['impact'] = df['impact'].multiply(args.decay_factor).astype(np.double)
     write("{}#{}.impacts".format(args.output_prefix, shard), pd.concat(output_dfs), compression='SNAPPY', write_index=False)
