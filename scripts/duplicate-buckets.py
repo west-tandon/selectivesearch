@@ -8,7 +8,7 @@ parser.add_argument('input_prefix')
 parser.add_argument('output_prefix')
 parser.add_argument('shards', type=int)
 parser.add_argument('buckets', type=int)
-parser.add_argument('--decay-factor', '-f', type=int, default=1.0)
+parser.add_argument('--decay-factor', '-f', type=double, default=1.0)
 args = parser.parse_args()
 
 
