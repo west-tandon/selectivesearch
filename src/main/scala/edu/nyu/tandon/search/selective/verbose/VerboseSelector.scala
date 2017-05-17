@@ -20,6 +20,7 @@ class VerboseSelector(val shards: Seq[Shard],
                       val lastSelectedShard: Int = -1,
                       val cost: Double = 0,
                       val postings: Long = 0,
+                      val selectedShards: Int = 0,
                       scale: Int = 4) {
 
   def topShards(n: Int): VerboseSelector = {
@@ -59,7 +60,9 @@ class VerboseSelector(val shards: Seq[Shard],
           top,
           selectedShardId,
           cost + selected.cost,
-          postings + selected.postings
+          postings + selected.postings,
+          if (shards(selectedShardId).numSelected == 0) selectedShards + 1
+          else selectedShards
         )
       )
     }
@@ -222,7 +225,8 @@ object VerboseSelector extends LazyLogging {
       "last_postings",
       "last_impact",
       "last#relevant",
-      overlaps.map(o => s"last#top_$o").mkString(",")
+      overlaps.map(o => s"last#top_$o").mkString(","),
+      "num_shards_selected"
     ).mkString(","))
     writer.newLine()
     writer.flush()
@@ -252,7 +256,8 @@ object VerboseSelector extends LazyLogging {
         selector.lastSelectedPostings,
         selector.lastSelectedImpact,
         selector.numRelevantInLastSelected(),
-        overlaps.map(selector.numTopInLastSelected).mkString(",")
+        overlaps.map(selector.numTopInLastSelected).mkString(","),
+        selector.selectedShards
       ).mkString(","))
 
       writer.newLine()
