@@ -288,7 +288,7 @@ object VerboseSelector extends LazyLogging {
                       overlaps: Seq[Int] = Seq(10, 30),
                       complexRecalls: Seq[Int] = Seq(10, 30),
                       complexPrecisions: Seq[Int] = Seq(10, 30),
-                      overheads: Seq[Long] = Seq(10000, 50000, 100000),
+                      overheads: Seq[Long] = Seq(10000, 50000, 100000, 500000, 1000000),
                       maxShards: Int = Int.MaxValue,
                       shardPenalty: Double = 0.0,
                       batchSize: Int = 200,
