@@ -92,8 +92,8 @@ class VerboseSelector(val shards: Seq[Shard],
   lazy val totalPostings: Long = shards.map(_.postings).sum
   lazy val postingsRelative: Double = round(postings.toDouble / totalPostings.toDouble)
 
-  def totalPostings(overhead: Long): Long = totalPostings + overhead
-  def postingsRelative(overhead: Long): Double = round(totalPostings(overhead).toDouble / (totalPostings + shards.length.toLong * overhead).toDouble)
+  def postings(overhead: Long): Long = postings + overhead * selectedShards
+  def postingsRelative(overhead: Long): Double = round(postings(overhead).toDouble / (totalPostings + shards.length.toLong * overhead).toDouble)
 
 }
 
@@ -251,7 +251,7 @@ object VerboseSelector extends LazyLogging {
         selector.cost,
         selector.postings,
         selector.postingsRelative,
-        overheads.map(selector.totalPostings(_)).mkString(","),
+        overheads.map(selector.postings(_)).mkString(","),
         overheads.map(selector.postingsRelative(_)).mkString(","),
         precisions.map(selector.precisionAt).mkString(","),
         overlaps.map(selector.overlapAt).mkString(","),
