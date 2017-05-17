@@ -34,6 +34,7 @@ class VerboseSelector(val shards: Seq[Shard],
       lastSelectedShard,
       cost,
       postings,
+      selectedShards,
       scale
     )
   }
