@@ -92,6 +92,9 @@ class VerboseSelector(val shards: Seq[Shard],
   lazy val totalPostings: Long = shards.map(_.postings).sum
   lazy val postingsRelative: Double = round(postings.toDouble / totalPostings.toDouble)
 
+  def totalPostings(overhead: Long) = totalPostings + overhead
+  def postingsRelative(overhead: Long) = round(totalPostings(overhead).toDouble / (totalPostings + shards.length.toLong * overhead).toDouble)
+
 }
 
 object VerboseSelector extends LazyLogging {
@@ -208,13 +211,15 @@ object VerboseSelector extends LazyLogging {
       }
   }
 
-  def printHeader(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int], complexPrecisions: Seq[Int])(writer: BufferedWriter): Unit = {
+  def printHeader(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int], complexPrecisions: Seq[Int], overheads: Seq[Long])(writer: BufferedWriter): Unit = {
     writer.write(Seq(
       "qid",
       "step",
       "cost",
       "postings",
       "postings_relative",
+      overheads.map(o => s"postings_o$o").mkString(","),
+      overheads.map(o => s"postings_relative_o$o").mkString(","),
       precisions.map(p => s"P@$p").mkString(","),
       overlaps.map(o => s"O@$o").mkString(","),
       complexRecalls.map(c => s"$c-CR").mkString(","),
@@ -232,7 +237,7 @@ object VerboseSelector extends LazyLogging {
     writer.flush()
   }
 
-  def processSelector(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int], complexPrecisions: Seq[Int], maxShards: Int)
+  def processSelector(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int], complexPrecisions: Seq[Int], overheads: Seq[Long], maxShards: Int)
                      (qid: Int, selector: VerboseSelector, writer: BufferedWriter): Unit = {
 
     @tailrec
@@ -246,6 +251,8 @@ object VerboseSelector extends LazyLogging {
         selector.cost,
         selector.postings,
         selector.postingsRelative,
+        overheads.map(selector.totalPostings(_)).mkString(","),
+        overheads.map(selector.postingsRelative(_)).mkString(","),
         precisions.map(selector.precisionAt).mkString(","),
         overlaps.map(selector.overlapAt).mkString(","),
         complexRecalls.map(selector.complexRecall).mkString(","),
@@ -280,6 +287,7 @@ object VerboseSelector extends LazyLogging {
                       overlaps: Seq[Int] = Seq(10, 30),
                       complexRecalls: Seq[Int] = Seq(10, 30),
                       complexPrecisions: Seq[Int] = Seq(10, 30),
+                      overheads: Seq[Long] = Seq(10000, 50000, 100000),
                       maxShards: Int = Int.MaxValue,
                       shardPenalty: Double = 0.0,
                       batchSize: Int = 200,
@@ -342,7 +350,7 @@ object VerboseSelector extends LazyLogging {
           .map(a => (a.head, a.last + 1))
 
         val writer = new BufferedWriter(new FileWriter(s"${config.basename}.verbose"))
-        printHeader(config.precisions, config.overlaps, config.complexRecalls, config.complexPrecisions)(writer)
+        printHeader(config.precisions, config.overlaps, config.complexRecalls, config.complexPrecisions, config.overheads)(writer)
 
         for ((from, to) <- queries) {
 
@@ -351,7 +359,7 @@ object VerboseSelector extends LazyLogging {
 
           for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
             logger.info(s"processing query ${idx + from}")
-            processSelector(config.precisions, config.overlaps, config.complexRecalls, config.complexPrecisions, config.maxShards)(idx, selector, writer)
+            processSelector(config.precisions, config.overlaps, config.complexRecalls, config.complexPrecisions, config.overheads, config.maxShards)(idx, selector, writer)
           }
         }
 
