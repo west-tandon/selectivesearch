@@ -92,8 +92,8 @@ class VerboseSelector(val shards: Seq[Shard],
   lazy val totalPostings: Long = shards.map(_.postings).sum
   lazy val postingsRelative: Double = round(postings.toDouble / totalPostings.toDouble)
 
-  def totalPostings(overhead: Long) = totalPostings + overhead
-  def postingsRelative(overhead: Long) = round(totalPostings(overhead).toDouble / (totalPostings + shards.length.toLong * overhead).toDouble)
+  def totalPostings(overhead: Long): Long = totalPostings + overhead
+  def postingsRelative(overhead: Long): Double = round(totalPostings(overhead).toDouble / (totalPostings + shards.length.toLong * overhead).toDouble)
 
 }
 
