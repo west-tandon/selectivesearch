@@ -360,7 +360,7 @@ object VerboseSelector extends LazyLogging {
 
           for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
             logger.info(s"processing query ${idx + from}")
-            processSelector(config.precisions, config.overlaps, config.complexRecalls, config.complexPrecisions, config.overheads, config.maxShards)(idx, selector, writer)
+            processSelector(config.precisions, config.overlaps, config.complexRecalls, config.complexPrecisions, config.overheads, config.maxShards)(idx + from, selector, writer)
           }
         }
 
