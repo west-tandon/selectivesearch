@@ -1,13 +1,11 @@
 package edu.nyu.tandon.search.selective.verbose
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{BufferedWriter, FileWriter}
 
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
-import edu.nyu.tandon.search.selective.verbose.VerboseSelector.scoreOrdering
-import org.apache.spark.sql.functions.when
-import org.apache.spark.sql.types.StructType
+import edu.nyu.tandon.search.selective.verbose.VerboseSelector.baseRankOrdering
 import org.apache.spark.sql.{Row, SparkSession}
 import scopt.OptionParser
 
@@ -18,11 +16,11 @@ import scala.collection.mutable
   * @author michal.siedlaczek@nyu.edu
   */
 class VerboseSelector(val shards: Seq[Shard],
-                      top: mutable.PriorityQueue[Result] = new mutable.PriorityQueue[Result]()(scoreOrdering),
+                      top: mutable.PriorityQueue[Result] = new mutable.PriorityQueue[Result]()(baseRankOrdering),
                       val lastSelectedShard: Int = -1,
                       val cost: Double = 0,
                       val postings: Long = 0,
-                      maxTop: Int = 500,
+                      val selectedShards: Int = 0,
                       scale: Int = 4) {
 
   def topShards(n: Int): VerboseSelector = {
@@ -36,7 +34,7 @@ class VerboseSelector(val shards: Seq[Shard],
       lastSelectedShard,
       cost,
       postings,
-      maxTop,
+      selectedShards,
       scale
     )
   }
@@ -52,7 +50,7 @@ class VerboseSelector(val shards: Seq[Shard],
 
       /* update queue */
       top.enqueue(selected.results: _*)
-      top.enqueue(top.dequeueAll.take(maxTop): _*)
+      top.enqueue(top.dequeueAll.take(500): _*)
 
       val selectedShardId = selected.shardId
       Some(
@@ -63,7 +61,9 @@ class VerboseSelector(val shards: Seq[Shard],
           top,
           selectedShardId,
           cost + selected.cost,
-          postings + selected.postings
+          postings + selected.postings,
+          if (shards(selectedShardId).numSelected == 0) selectedShards + 1
+          else selectedShards
         )
       )
     }
@@ -72,8 +72,9 @@ class VerboseSelector(val shards: Seq[Shard],
   def round(x: Double): Double = BigDecimal(x).setScale(scale, BigDecimal.RoundingMode.HALF_UP).toDouble
 
   def precisionAt(k: Int): Double = round(top.clone().dequeueAll.take(k).count(_.relevant).toDouble / k)
-  def overlapAt(k: Int): Double = round(top.clone().dequeueAll.take(k).count(_.originalRank <= k).toDouble / k)
-  def complexRecall(k: Int): Double = round(top.clone().dequeueAll.count(_.complexRank <= k).toDouble / k)
+  def overlapAt(k: Int): Double = round(top.clone().dequeueAll.take(k).count(_.originalRank < k).toDouble / k)
+  def complexRecall(k: Int): Double = round(top.clone().dequeueAll.count(_.complexRank < k).toDouble / k)
+  def complexPrecisionAt(k: Int): Double = round(top.clone().dequeueAll.sortBy(_.complexRank).take(k).count(_.relevant).toDouble / k)
 
   def numRelevantInLastSelected(): Int = {
     assert(lastSelectedShard >= 0 && lastSelectedShard < shards.length, "no last selection to report")
@@ -92,15 +93,19 @@ class VerboseSelector(val shards: Seq[Shard],
   lazy val totalPostings: Long = shards.map(_.postings).sum
   lazy val postingsRelative: Double = round(postings.toDouble / totalPostings.toDouble)
 
+  def postings(overhead: Long): Long = postings + overhead * selectedShards
+  def postingsRelative(overhead: Long): Double = round(postings(overhead).toDouble / (totalPostings + shards.length.toLong * overhead).toDouble)
+
 }
 
 object VerboseSelector extends LazyLogging {
 
   val CommandName = "verbose-select"
 
-  val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
+  //val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
+  val baseRankOrdering: Ordering[Result] = Ordering.by((result: Result) => -result.originalRank)
 
-  def selectors(basename: String, shardPenalty: Double, from: Int, to: Int): Iterator[VerboseSelector] = {
+  def selectors(basename: String, shardPenalty: Double, from: Int, to: Int, usePostingCosts: Boolean): Iterator[VerboseSelector] = {
     val properties = Properties.get(basename)
     val features = Features.get(properties)
     val spark = SparkSession.builder().master("local").getOrCreate()
@@ -133,12 +138,6 @@ object VerboseSelector extends LazyLogging {
             Result(score, relevant, baseOrder, complexOrder)
         }))
     }
-
-    //val costs =
-    //  if (new File(s"basename#0.cost").exists())
-    //    Some(for (shard <- 0 until properties.shardCount) yield
-    //      spark.read.parquet(s"$basename#$shard.cost"))
-    //  else None
 
     val postingCosts = for (shard <- 0 until properties.shardCount) yield
       spark.read.parquet(s"${features.basename}#$shard.postingcost-${properties.bucketCount}")
@@ -202,8 +201,10 @@ object VerboseSelector extends LazyLogging {
                   }
                   case None => 0.0
                 },
-                cost = 1.0 / properties.bucketCount,
-                qPostingCosts(bucket))
+                cost =
+                  if (usePostingCosts) qPostingCosts(bucket)
+                  else 1.0 / properties.bucketCount,
+                postings = qPostingCosts(bucket))
             }
             Shard(shard, buckets.toList)
           }
@@ -212,35 +213,39 @@ object VerboseSelector extends LazyLogging {
       }
   }
 
-  def printHeader(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int])(writer: BufferedWriter): Unit = {
+  def printHeader(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int], complexPrecisions: Seq[Int], overheads: Seq[Long])(writer: BufferedWriter): Unit = {
     writer.write(Seq(
       "qid",
       "step",
       "cost",
       "postings",
       "postings_relative",
+      overheads.map(o => s"postings_o$o").mkString(","),
+      overheads.map(o => s"postings_relative_o$o").mkString(","),
       precisions.map(p => s"P@$p").mkString(","),
       overlaps.map(o => s"O@$o").mkString(","),
       complexRecalls.map(c => s"$c-CR").mkString(","),
+      complexPrecisions.map(c => s"CP@$c").mkString(","),
       "last_shard",
       "last_bucket",
       "last_cost",
       "last_postings",
       "last_impact",
       "last#relevant",
-      overlaps.map(o => s"last#top_$o").mkString(",")
+      overlaps.map(o => s"last#top_$o").mkString(","),
+      "num_shards_selected"
     ).mkString(","))
     writer.newLine()
     writer.flush()
   }
 
-  def processSelector(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int], maxShards: Int)
+  def processSelector(precisions: Seq[Int], overlaps: Seq[Int], complexRecalls: Seq[Int], complexPrecisions: Seq[Int], overheads: Seq[Long], maxShards: Int)
                      (qid: Int, selector: VerboseSelector, writer: BufferedWriter): Unit = {
 
     @tailrec
     def process(selector: VerboseSelector, step: Int = 1): Unit = {
 
-      logger.info(s"Selected [shard=${selector.lastSelectedShard}, bucket=${selector.lastSelectedBucket}, cost=${selector.lastSelectedCost}]")
+      //logger.info(s"Selected [shard=${selector.lastSelectedShard}, bucket=${selector.lastSelectedBucket}, cost=${selector.lastSelectedCost}]")
 
       writer.write(Seq(
         qid,
@@ -248,16 +253,20 @@ object VerboseSelector extends LazyLogging {
         selector.cost,
         selector.postings,
         selector.postingsRelative,
+        overheads.map(selector.postings(_)).mkString(","),
+        overheads.map(selector.postingsRelative(_)).mkString(","),
         precisions.map(selector.precisionAt).mkString(","),
         overlaps.map(selector.overlapAt).mkString(","),
         complexRecalls.map(selector.complexRecall).mkString(","),
+        complexPrecisions.map(selector.complexPrecisionAt).mkString(","),
         selector.lastSelectedShard,
         selector.lastSelectedBucket,
         selector.lastSelectedCost,
         selector.lastSelectedPostings,
         selector.lastSelectedImpact,
         selector.numRelevantInLastSelected(),
-        overlaps.map(selector.numTopInLastSelected).mkString(",")
+        overlaps.map(selector.numTopInLastSelected).mkString(","),
+        selector.selectedShards
       ).mkString(","))
 
       writer.newLine()
@@ -279,9 +288,12 @@ object VerboseSelector extends LazyLogging {
                       precisions: Seq[Int] = Seq(10, 30),
                       overlaps: Seq[Int] = Seq(10, 30),
                       complexRecalls: Seq[Int] = Seq(10, 30),
+                      complexPrecisions: Seq[Int] = Seq(10, 30),
+                      overheads: Seq[Long] = Seq(10000, 50000, 100000, 500000, 1000000),
                       maxShards: Int = Int.MaxValue,
                       shardPenalty: Double = 0.0,
-                      batchSize: Int = 50)
+                      batchSize: Int = 200,
+                      usePostingCosts: Boolean = false)
 
     val parser = new OptionParser[Config](CommandName) {
 
@@ -299,8 +311,12 @@ object VerboseSelector extends LazyLogging {
         .text("k for which to compute O@k")
 
       opt[Seq[Int]]('c', "complex-recalls")
-        .action((x, c) => c.copy(overlaps = x))
+        .action((x, c) => c.copy(complexRecalls = x))
         .text("k for which to compute k-CR")
+
+      opt[Seq[Int]]('C', "complex-precisions")
+        .action((x, c) => c.copy(complexPrecisions = x))
+        .text("k for which to compute CP@k")
 
       opt[Double]('P', "penalty")
         .action((x, c) => c.copy(shardPenalty = x))
@@ -313,6 +329,10 @@ object VerboseSelector extends LazyLogging {
       opt[Int]('b', "batch-size")
         .action((x, c) => c.copy(batchSize = x))
         .text("how many queries to run at once in memory")
+
+      opt[Boolean]('u', "use-posting-costs")
+        .action((x, c) => c.copy(usePostingCosts = x))
+        .text("use posting costs instead of fixed uniform costs")
 
     }
 
@@ -332,17 +352,16 @@ object VerboseSelector extends LazyLogging {
           .map(a => (a.head, a.last + 1))
 
         val writer = new BufferedWriter(new FileWriter(s"${config.basename}.verbose"))
+        printHeader(config.precisions, config.overlaps, config.complexRecalls, config.complexPrecisions, config.overheads)(writer)
 
         for ((from, to) <- queries) {
 
-          logger.info("creating selectors")
-          val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to)
-
-          printHeader(config.precisions, config.overlaps, config.complexRecalls)(writer)
+          logger.info(s"processing batch [$from, $to]")
+          val selectorsForQueries = selectors(config.basename, config.shardPenalty, from, to, config.usePostingCosts)
 
           for ((selector, idx) <- selectorsForQueries.zipWithIndex) {
-            logger.info(s"processing query $idx")
-            processSelector(config.precisions, config.overlaps, config.complexRecalls, config.maxShards)(idx, selector, writer)
+            logger.info(s"processing query ${idx + from}")
+            processSelector(config.precisions, config.overlaps, config.complexRecalls, config.complexPrecisions, config.overheads, config.maxShards)(idx + from, selector, writer)
           }
         }
 
