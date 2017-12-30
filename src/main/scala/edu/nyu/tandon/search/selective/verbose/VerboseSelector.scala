@@ -5,7 +5,7 @@ import java.io.{BufferedWriter, FileWriter}
 import com.typesafe.scalalogging.LazyLogging
 import edu.nyu.tandon.search.selective.data.Properties
 import edu.nyu.tandon.search.selective.data.features.Features
-import edu.nyu.tandon.search.selective.verbose.VerboseSelector.scoreOrdering
+import edu.nyu.tandon.search.selective.verbose.VerboseSelector.baseRankOrdering
 import org.apache.spark.sql.{Row, SparkSession}
 import scopt.OptionParser
 
@@ -16,7 +16,7 @@ import scala.collection.mutable
   * @author michal.siedlaczek@nyu.edu
   */
 class VerboseSelector(val shards: Seq[Shard],
-                      top: mutable.PriorityQueue[Result] = new mutable.PriorityQueue[Result]()(scoreOrdering),
+                      top: mutable.PriorityQueue[Result] = new mutable.PriorityQueue[Result]()(baseRankOrdering),
                       val lastSelectedShard: Int = -1,
                       val cost: Double = 0,
                       val postings: Long = 0,
@@ -102,7 +102,6 @@ object VerboseSelector extends LazyLogging {
 
   val CommandName = "verbose-select"
 
-  //val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
   val baseRankOrdering: Ordering[Result] = Ordering.by((result: Result) => result.originalRank)
 
   def selectors(basename: String, shardPenalty: Double, from: Int, to: Int, usePostingCosts: Boolean): Iterator[VerboseSelector] = {
