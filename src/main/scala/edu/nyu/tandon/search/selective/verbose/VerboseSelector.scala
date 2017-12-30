@@ -102,7 +102,8 @@ object VerboseSelector extends LazyLogging {
 
   val CommandName = "verbose-select"
 
-  val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
+  //val scoreOrdering: Ordering[Result] = Ordering.by((result: Result) => result.score)
+  val baseRankOrdering: Ordering[Result] = Ordering.by((result: Result) => result.originalRank)
 
   def selectors(basename: String, shardPenalty: Double, from: Int, to: Int, usePostingCosts: Boolean): Iterator[VerboseSelector] = {
     val properties = Properties.get(basename)
